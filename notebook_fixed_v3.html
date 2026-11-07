@@ -1167,7 +1167,7 @@ function setWritingFullscreen(enabled) {
     requestAnimationFrame(renderPaper);
 }
 
-async async function toggleWritingFullscreen() {
+async function toggleWritingFullscreen() {
     const entering = !appElement.classList.contains('writing-fullscreen');
 
     if(!entering) {
