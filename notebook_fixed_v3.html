@@ -761,6 +761,8 @@ canvas {
 .pen-sample[data-tool="highlighter"] .pen-sample-line { border-bottom-width: 9px; opacity: .3; }
 .pen-sample[data-tool="fountain"] .pen-sample-line { border-bottom-width: 4px; }
 .pen-sample[data-tool="calligraphy"] .pen-sample-line { border-bottom-width: 5px; transform: skewX(-25deg); }
+.pen-sample[data-tool="oblique"] svg path { stroke-width: 5; stroke-linecap: butt; }
+.pen-sample[data-tool="oblique"] .pen-sample-line { border-bottom-width: 6px; transform: skewX(-35deg); }
 @media(max-width:600px) {
     .app.writing-fullscreen .quick-palette {
         width: 142px;
@@ -921,6 +923,7 @@ canvas {
                 <option value="nastaliq">نستعلیق‌نما</option>
                 <option value="tahriri">تحریری</option>
                 <option value="titr">قلم تیتر</option>
+                <option value="oblique">قلم سرکج</option>
                 <option value="eraser">پاک‌کن</option>
             </select>
 
@@ -1020,6 +1023,7 @@ const penSampleOptions = [
     {value:'nastaliq', label:'نستعلیق‌نما'},
     {value:'tahriri', label:'تحریری'},
     {value:'titr', label:'قلم تیتر'},
+    {value:'oblique', label:'قلم سرکج'},
     {value:'eraser', label:'پاک‌کن'}
 ];
 function saveFavoriteColors() {
@@ -1058,6 +1062,7 @@ function renderPenSamples() {
         nastaliq:'M4 22 C14 2 24 27 35 12 S55 4 70 18',
         tahriri:'M4 18 Q16 8 28 17 T52 16 T70 12',
         titr:'M4 20 C18 1 26 27 40 13 S58 6 70 17',
+        oblique:'M4 22 L18 7 L29 20 L43 5 L55 18 L70 6',
         eraser:'M4 18 L18 18 M25 18 L38 18 M45 18 L70 18'
     };
     container.innerHTML = '';
@@ -1549,6 +1554,7 @@ function drawStrokeToContext(target, stroke, width, height) {
         case 'nastaliq': mult=1.55; alpha=.98; break;
         case 'tahriri': mult=.92; alpha=.97; break;
         case 'titr': mult=2.45; alpha=.94; break;
+        case 'oblique': mult=2.7; alpha=.98; cap='butt'; join='bevel'; break;
         case 'eraser': mult=3; break;
     }
     target.save();
@@ -1582,6 +1588,11 @@ function drawStrokeToContext(target, stroke, width, height) {
                 const speedFactor=Math.max(.78,Math.min(1.12,1.08-distance/32));
                 factor=(.88+pressure*.18)*speedFactor;
             } else if(tool==='titr') factor=.92+pressure*.28;
+            else if(tool==='oblique') {
+                // نوک تخت مورب: زاویه ثابت لبه باعث تغییر پهنا با جهت حرکت می‌شود.
+                const nibAngle = Math.PI / 4;
+                factor = .16 + .98 * Math.abs(Math.sin(angle - nibAngle));
+            }
             target.beginPath();
             target.lineWidth=Math.max(.45,stroke.size*mult*pressure*factor);
             target.moveTo(a.x*width,a.y*height);
