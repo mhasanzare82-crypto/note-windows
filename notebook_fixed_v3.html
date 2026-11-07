@@ -335,6 +335,14 @@ canvas {
     width: 65px;
     cursor: pointer;
 }
+.oblique-angle-control {
+    display:none;
+    align-items:center;
+    gap:5px;
+    white-space:nowrap;
+}
+.oblique-angle-control.visible { display:flex; }
+.oblique-angle-control input[type=range] { width:82px; }
 
 .tool {
     font-size: 11px;
@@ -926,6 +934,12 @@ canvas {
                 <option value="oblique">قلم سرکج</option>
                 <option value="eraser">پاک‌کن</option>
             </select>
+
+            <label class="oblique-angle-control" id="obliqueAngleControl" title="زاویه پایه نوک قلم سرکج">
+                <span class="small">زاویه نوک</span>
+                <input type="range" id="obliqueAngle" min="0" max="180" value="90">
+                <span class="small" id="obliqueAngleValue">۹۰°</span>
+            </label>
 
             <input type="color" id="color"
                    value="#20242c" title="انتخاب رنگ">
@@ -1566,15 +1580,14 @@ function drawStrokeToContext(target, stroke, width, height) {
     target.lineJoin = join;
     target.setLineDash(dash);
     if(tool === 'oblique') {
-        // نوک قلم در زاویه ۹۰ درجه ثابت می‌ماند؛ مسیر به‌صورت یک چندضلعی پیوسته پر می‌شود تا بین قطعه‌ها درز ایجاد نشود.
-        const nibAngle = Math.PI / 2;
-        const nx = -Math.sin(nibAngle);
-        const ny = Math.cos(nibAngle);
+        // زاویه نوک در هر نقطه از چرخش قلم نوری یا زاویه دستی خوانده می‌شود.
         const left = [], right = [];
         for(let i=0;i<pts.length;i++) {
             const p = pts[i];
             const pressure = stroke.usePressure ? Math.max(.15,p.pressure||.5) : 1;
             const halfWidth = Math.max(.45, stroke.size * mult * pressure) / 2;
+            const nibAngle = Number.isFinite(p.nibAngle) ? p.nibAngle : Math.PI / 2;
+            const nx = -Math.sin(nibAngle), ny = Math.cos(nibAngle);
             const x = p.x * width, y = p.y * height;
             left.push([x - nx*halfWidth, y - ny*halfWidth]);
             right.push([x + nx*halfWidth, y + ny*halfWidth]);
@@ -1641,17 +1654,32 @@ function redraw() {
     p.strokes.forEach(s => drawStroke(s));
 }
 
+/* کنترل زاویه قلم سرکج */
+function updateObliqueAngleControl() {
+    const control = $('obliqueAngleControl');
+    if(control) control.classList.toggle('visible', $('tool').value === 'oblique');
+}
+$('tool').addEventListener('change', updateObliqueAngleControl);
+$('obliqueAngle').addEventListener('input', () => {
+    $('obliqueAngleValue').textContent = $('obliqueAngle').value + '°';
+});
+updateObliqueAngleControl();
+
 /* دریافت مختصات قلم */
 
 function getPoint(e) {
     const r = canvas.getBoundingClientRect();
+    const baseAngle = Number($('obliqueAngle')?.value || 90);
+    // PointerEvent.twist زاویه چرخش بدنه قلم نوری است؛ اسلایدر زاویه پایه/جایگزین را تعیین می‌کند.
+    const penTwist = e.pointerType === 'pen' && Number.isFinite(e.twist) ? e.twist : 0;
 
     return {
         x: (e.clientX - r.left) / r.width,
         y: (e.clientY - r.top) / r.height,
         pressure: e.pointerType === 'pen'
             ? (e.pressure > 0 ? e.pressure : .5)
-            : 1
+            : 1,
+        nibAngle: ((baseAngle + penTwist) % 360) * Math.PI / 180
     };
 }
 
