@@ -1475,6 +1475,20 @@ const fullscreenToggle = $('fullscreenToggle');
 
 function setWritingFullscreen(enabled) {
     appElement.classList.toggle('writing-fullscreen', enabled);
+    if(typeof floatingControls !== 'undefined') {
+        if(enabled) {
+            ['newPage','tool','color','undo','clear'].forEach(id => {
+                const node = $(id);
+                if(node && node.parentElement !== floatingControls) floatingControls.appendChild(node);
+            });
+        } else if(typeof originalControlPositions !== 'undefined') {
+            originalControlPositions.forEach(item => {
+                if(item.node && item.parent && item.node.parentElement !== item.parent) {
+                    item.parent.insertBefore(item.node, item.nextSibling && item.nextSibling.parentElement === item.parent ? item.nextSibling : null);
+                }
+            });
+        }
+    }
     fullscreenToggle.textContent = enabled ? '⛶ خروج از تمام‌صفحه' : '⛶ تمام‌صفحه';
     fullscreenToggle.title = enabled ? 'خروج از حالت تمام‌صفحه' : 'نمایش تمام‌صفحه';
     requestAnimationFrame(renderPaper);
@@ -1606,6 +1620,10 @@ document.addEventListener('visibilitychange', () => {
 });
 
 /* انتقال کنترل‌های پرکاربرد به نوار شناور قابل جابه‌جایی با قلم یا لمس */
+const originalControlPositions = ['newPage','tool','color','undo','clear'].map(id => {
+    const node = $(id);
+    return {node, parent:node ? node.parentElement : null, nextSibling:node ? node.nextSibling : null};
+});
 const floatingControls = document.createElement('div');
 floatingControls.className = 'floating-controls';
 floatingControls.id = 'floatingControls';
@@ -1619,6 +1637,10 @@ floatingControls.appendChild(dragHandle);
     if(node) floatingControls.appendChild(node);
 });
 document.body.appendChild(floatingControls);
+// در حالت عادی، کنترل‌ها در جای اصلی خود باقی می‌مانند.
+originalControlPositions.forEach(item => {
+    if(item.node && item.parent) item.parent.insertBefore(item.node, item.nextSibling && item.nextSibling.parentElement === item.parent ? item.nextSibling : null);
+});
 
 let dockDragging = false;
 let dockPointerId = null;
