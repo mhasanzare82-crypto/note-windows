@@ -1565,7 +1565,27 @@ function drawStrokeToContext(target, stroke, width, height) {
     target.lineCap = cap;
     target.lineJoin = join;
     target.setLineDash(dash);
-    if(pts.length === 1) {
+    if(tool === 'oblique') {
+        // نوک قلم در زاویه ۹۰ درجه ثابت می‌ماند؛ مسیر به‌صورت یک چندضلعی پیوسته پر می‌شود تا بین قطعه‌ها درز ایجاد نشود.
+        const nibAngle = Math.PI / 2;
+        const nx = -Math.sin(nibAngle);
+        const ny = Math.cos(nibAngle);
+        const left = [], right = [];
+        for(let i=0;i<pts.length;i++) {
+            const p = pts[i];
+            const pressure = stroke.usePressure ? Math.max(.15,p.pressure||.5) : 1;
+            const halfWidth = Math.max(.45, stroke.size * mult * pressure) / 2;
+            const x = p.x * width, y = p.y * height;
+            left.push([x - nx*halfWidth, y - ny*halfWidth]);
+            right.push([x + nx*halfWidth, y + ny*halfWidth]);
+        }
+        target.beginPath();
+        target.moveTo(left[0][0], left[0][1]);
+        for(let i=1;i<left.length;i++) target.lineTo(left[i][0],left[i][1]);
+        for(let i=right.length-1;i>=0;i--) target.lineTo(right[i][0],right[i][1]);
+        target.closePath();
+        target.fill();
+    } else if(pts.length === 1) {
         const p=pts[0], pressure=stroke.usePressure ? Math.max(.15,p.pressure||.5) : 1;
         target.beginPath();
         target.arc(p.x*width,p.y*height,stroke.size*mult*pressure/2,0,Math.PI*2);
@@ -1578,21 +1598,6 @@ function drawStrokeToContext(target, stroke, width, height) {
             const angle=Math.atan2(dy,dx);
             const pressure=stroke.usePressure ? Math.max(.15,((a.pressure||.5)+(b.pressure||.5))/2) : 1;
             let factor=1;
-            if(tool==='oblique') {
-                // زاویه نوک قلم نسبت به صفحه ثابت است و با جهت حرکت دست تغییر نمی‌کند.
-                const nibAngle = Math.PI / 4;
-                const halfWidth = Math.max(.45, stroke.size * mult * pressure) / 2;
-                const nx = -Math.sin(nibAngle) * halfWidth;
-                const ny = Math.cos(nibAngle) * halfWidth;
-                target.beginPath();
-                target.moveTo(a.x*width - nx, a.y*height - ny);
-                target.lineTo(b.x*width - nx, b.y*height - ny);
-                target.lineTo(b.x*width + nx, b.y*height + ny);
-                target.lineTo(a.x*width + nx, a.y*height + ny);
-                target.closePath();
-                target.fill();
-                continue;
-            }
             if(tool==='calligraphy') factor=.28+.92*Math.abs(Math.sin(angle));
             else if(tool==='fountain') factor=.72+pressure*.48;
             else if(tool==='brush') factor=.82+pressure*.38;
