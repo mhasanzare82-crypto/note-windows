@@ -880,6 +880,7 @@ canvas {
     <span style="flex:1"></span>
     <button class="tool" id="fullscreenToggle" title="نمایش تمام‌صفحه">⛶ تمام‌صفحه</button>
     <button class="primary" id="newPage">＋ صفحه جدید</button>
+    <button class="tool" id="saveTopic">⬇ ذخیره موضوع و صفحات</button>
 </header>
 
 <div class="layout">
@@ -1198,6 +1199,39 @@ function save() {
             'فضای ذخیره‌سازی مرورگر کافی نیست';
     }
 }
+
+/* خروجی گرفتن از موضوع انتخاب‌شده همراه تمام صفحات */
+$('saveTopic').onclick = () => {
+    const selectedTopic = topic();
+    if(!selectedTopic) return;
+
+    try {
+        const exportData = {
+            format: 'notebook-topic',
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            topic: selectedTopic
+        };
+        const blob = new Blob(
+            [JSON.stringify(exportData, null, 2)],
+            {type: 'application/json;charset=utf-8'}
+        );
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const safeName = (selectedTopic.name || 'topic')
+            .replace(/[\\/:*?"<>|]/g, '_')
+            .trim() || 'topic';
+        link.href = url;
+        link.download = safeName + '.json';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        $('status').textContent = '✓ موضوع و تمام صفحات آن ذخیره شد';
+    } catch(error) {
+        $('status').textContent = 'ذخیره موضوع انجام نشد';
+    }
+};
 
 /* نمایش موضوعات و صفحات */
 
