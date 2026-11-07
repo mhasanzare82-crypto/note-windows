@@ -439,6 +439,81 @@ canvas {
     }
 }
 
+/* پنل سمت راست برای موضوعات منتخب و صفحات همان موضوع */
+.app.writing-fullscreen .top-area {
+    display:flex;
+    flex-direction:column;
+    position:fixed;
+    top:10px;
+    right:10px;
+    left:auto;
+    transform:none;
+    z-index:10025;
+    width:218px;
+    max-width:calc(100vw - 20px);
+    max-height:calc(100dvh - 20px);
+    padding:10px;
+    gap:7px;
+    overflow-y:auto;
+    overflow-x:hidden;
+    background:#fff;
+    border:1px solid #dfe4eb;
+    border-radius:12px;
+    box-shadow:0 2px 12px #0002;
+}
+.app.writing-fullscreen .top-area > .strip-label:first-child { display:block; }
+.app.writing-fullscreen .top-area #pinnedTabs {
+    display:flex;
+    flex-direction:column;
+    flex-wrap:nowrap;
+    gap:5px;
+    padding:0;
+    min-height:0;
+    overflow:visible;
+}
+.app.writing-fullscreen .top-area #pinnedTabs .tab {
+    display:block;
+    width:100%;
+    max-width:none;
+    min-height:34px;
+    text-align:right;
+    white-space:normal;
+}
+.app.writing-fullscreen .top-area #newPage {
+    display:block !important;
+    width:100%;
+    min-height:38px;
+    background:#3769d6;
+    color:#fff;
+}
+.app.writing-fullscreen .top-area #pageTabs {
+    display:flex !important;
+    flex-direction:column;
+    flex-wrap:nowrap;
+    gap:5px;
+    padding:0;
+    overflow:visible;
+}
+.app.writing-fullscreen .top-area #pageTabs .tab {
+    width:100%;
+    text-align:right;
+    white-space:normal;
+}
+.app.writing-fullscreen .top-area > .strip-label:nth-of-type(2) { display:block; }
+.app.writing-fullscreen .floating-controls { right:240px; left:auto; transform:none; max-width:calc(100vw - 500px); }
+.app.writing-fullscreen .quick-palette { left:10px; }
+@media(max-width:700px) {
+    .app.writing-fullscreen .top-area {
+        top:10px;right:8px;width:155px;max-height:calc(100dvh - 20px);
+    }
+    .app.writing-fullscreen .floating-controls {
+        top:auto;bottom:10px;right:8px;left:8px;max-width:none;
+        justify-content:center;transform:none;
+    }
+    .app.writing-fullscreen .quick-palette {
+        top:10px;left:8px;width:125px;max-height:calc(100dvh - 100px);
+    }
+}
 /* ابزارهای شناور و قابل جابه‌جایی در حالت تمام‌صفحه */
 .floating-controls { display:none; }
 .app.writing-fullscreen .floating-controls {
@@ -877,7 +952,10 @@ $('color').addEventListener('input', () => {
     renderFavoriteColors();
     renderPenSamples();
 });
-$('tool').addEventListener('change', renderPenSamples);
+$('tool').addEventListener('change', () => {
+    renderPenSamples();
+    if($('tool').value !== 'eraser') largeEraser.classList.remove('active');
+});
 renderFavoriteColors();
 renderPenSamples();
 
@@ -1473,11 +1551,26 @@ $('newPage').onclick = newPage;
 const appElement = document.querySelector('.app');
 const fullscreenToggle = $('fullscreenToggle');
 
+const topAreaOriginalPositions = [
+    {node:$('newPage'), parent:originalControlPositions.find(item => item.node && item.node.id === 'newPage').parent, nextSibling:originalControlPositions.find(item => item.node && item.node.id === 'newPage').nextSibling},
+    {node:$('pageTabs'), parent:$('pageTabs').parentElement, nextSibling:$('pageTabs').nextSibling}
+];
 function setWritingFullscreen(enabled) {
+    if(enabled) {
+        const topArea = document.querySelector('.top-area');
+        topArea.appendChild($('newPage'));
+        const pageLabel = topArea.querySelector('.strip-label:nth-of-type(2)');
+        if(pageLabel) topArea.appendChild(pageLabel);
+        topArea.appendChild($('pageTabs'));
+    } else {
+        topAreaOriginalPositions.forEach(item => {
+            if(item.node && item.parent) item.parent.insertBefore(item.node, item.nextSibling && item.nextSibling.parentElement === item.parent ? item.nextSibling : null);
+        });
+    }
     appElement.classList.toggle('writing-fullscreen', enabled);
     if(typeof floatingControls !== 'undefined') {
         if(enabled) {
-            ['newPage','tool','color','undo','clear'].forEach(id => {
+            ['tool','color','undo','clear'].forEach(id => {
                 const node = $(id);
                 if(node && node.parentElement !== floatingControls) floatingControls.appendChild(node);
             });
@@ -1627,12 +1720,25 @@ const originalControlPositions = ['newPage','tool','color','undo','clear'].map(i
 const floatingControls = document.createElement('div');
 floatingControls.className = 'floating-controls';
 floatingControls.id = 'floatingControls';
+const largeEraser = document.createElement('button');
+largeEraser.type = 'button';
+largeEraser.id = 'largeEraser';
+largeEraser.textContent = '🧽 پاک‌کن بزرگ';
+largeEraser.title = 'فعال‌کردن پاک‌کن با بیشترین قطر';
+largeEraser.addEventListener('click', () => {
+    $('tool').value = 'eraser';
+    $('thickness').value = '100';
+    $('thicknessValue').textContent = '100';
+    $('tool').dispatchEvent(new Event('change', {bubbles:true}));
+    largeEraser.classList.add('active');
+});
 const dragHandle = document.createElement('div');
 dragHandle.className = 'drag-handle';
 dragHandle.textContent = '⠿';
 dragHandle.title = 'برای جابه‌جایی، این دستگیره را با قلم بکشید';
 floatingControls.appendChild(dragHandle);
-['newPage','tool','color','undo','clear'].forEach(id => {
+floatingControls.appendChild(largeEraser);
+['tool','color','undo','clear'].forEach(id => {
     const node = $(id);
     if(node) floatingControls.appendChild(node);
 });
