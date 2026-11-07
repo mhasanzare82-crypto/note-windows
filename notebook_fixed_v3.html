@@ -55,91 +55,6 @@ button:hover {
 }
 
 
-/* رنگ‌های محبوب و انتخاب سریع نمونه قلم با لمس یا قلم نوری */
-const FAVORITE_COLORS_KEY = 'notebook_favorite_colors_v1';
-const defaultFavoriteColors = [
-    '#20242c', '#e53935', '#1e88e5', '#43a047',
-    '#8e24aa', '#fb8c00', '#00897b', '#5e35b1',
-    '#ec407a', '#795548'
-];
-let favoriteColors;
-try {
-    favoriteColors = JSON.parse(localStorage.getItem(FAVORITE_COLORS_KEY) || 'null');
-} catch(error) {
-    favoriteColors = null;
-}
-if(!Array.isArray(favoriteColors) || !favoriteColors.length) {
-    favoriteColors = [...defaultFavoriteColors];
-}
-const penSampleOptions = [
-    {value:'ballpoint', label:'خودکار'},
-    {value:'fine', label:'روان‌نویس'},
-    {value:'fountain', label:'خودنویس'},
-    {value:'pencil', label:'مداد'},
-    {value:'brush', label:'قلم‌مویی'},
-    {value:'marker', label:'ماژیک'},
-    {value:'highlighter', label:'هایلایتر'},
-    {value:'calligraphy', label:'خوشنویسی'},
-    {value:'eraser', label:'پاک‌کن'}
-];
-function saveFavoriteColors() {
-    try { localStorage.setItem(FAVORITE_COLORS_KEY, JSON.stringify(favoriteColors)); } catch(error) {}
-}
-function renderFavoriteColors() {
-    const container = $('favoriteColors');
-    if(!container) return;
-    container.innerHTML = '';
-    favoriteColors.forEach(color => {
-        const swatch = document.createElement('button');
-        swatch.type = 'button';
-        swatch.className = 'favorite-color' + ($('color').value.toLowerCase() === color.toLowerCase() ? ' selected' : '');
-        swatch.style.background = color;
-        swatch.title = color;
-        swatch.setAttribute('aria-label', 'انتخاب رنگ ' + color);
-        swatch.addEventListener('click', () => {
-            $('color').value = color;
-            renderFavoriteColors();
-        });
-        container.appendChild(swatch);
-    });
-}
-function renderPenSamples() {
-    const container = $('penSamples');
-    if(!container) return;
-    container.innerHTML = '';
-    penSampleOptions.forEach(option => {
-        const sample = document.createElement('button');
-        sample.type = 'button';
-        sample.className = 'pen-sample' + ($('tool').value === option.value ? ' selected' : '');
-        sample.dataset.tool = option.value;
-        sample.innerHTML = '<span class="pen-sample-name"></span><span class="pen-sample-line"></span>';
-        sample.querySelector('.pen-sample-name').textContent = option.label;
-        sample.style.color = $('color').value;
-        sample.addEventListener('click', () => {
-            $('tool').value = option.value;
-            renderPenSamples();
-        });
-        container.appendChild(sample);
-    });
-}
-$('addFavoriteColor').addEventListener('click', () => {
-    const chosen = $('favoriteColorPicker').value.toLowerCase();
-    if(!favoriteColors.some(color => color.toLowerCase() === chosen)) {
-        favoriteColors.push(chosen);
-        saveFavoriteColors();
-        renderFavoriteColors();
-    }
-    $('color').value = chosen;
-    renderFavoriteColors();
-});
-$('color').addEventListener('input', () => {
-    renderFavoriteColors();
-    renderPenSamples();
-});
-$('tool').addEventListener('change', renderPenSamples);
-renderFavoriteColors();
-renderPenSamples();
-
 /* حالت تمام‌صفحه محیط نوشتن */
 .app.writing-fullscreen header,
 .app.writing-fullscreen .sidebar,
@@ -524,130 +439,95 @@ canvas {
     }
 }
 
-/* چیدمان اختصاصی ابزارها در حالت تمام‌صفحه */
-.app.writing-fullscreen header {
-    display: block;
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    z-index: 10020;
-    width: 210px;
-    height: auto;
-    min-height: 0;
-    padding: 0;
-    border: 0;
-    background: transparent;
+/* ابزارهای شناور و قابل جابه‌جایی در حالت تمام‌صفحه */
+.floating-controls { display:none; }
+.app.writing-fullscreen .floating-controls {
+    display:flex;
+    position:fixed;
+    top:10px;
+    left:50%;
+    transform:translateX(-50%);
+    z-index:10030;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:6px;
+    max-width:calc(100vw - 300px);
+    padding:8px;
+    background:#fff;
+    border:1px solid #dfe4eb;
+    border-radius:12px;
+    box-shadow:0 3px 14px #0003;
+    touch-action:none;
 }
-.app.writing-fullscreen header > * { display: none !important; }
-.app.writing-fullscreen header #newPage {
-    display: block !important;
-    width: 100%;
-    min-height: 38px;
-    box-shadow: 0 2px 10px #0002;
+.floating-controls .drag-handle {
+    padding:5px 8px;
+    border-radius:7px;
+    background:#edf0f5;
+    color:#687487;
+    cursor:grab;
+    user-select:none;
+    touch-action:none;
+    font-size:16px;
 }
-.app.writing-fullscreen .toolbar {
-    display: flex;
-    position: fixed;
-    top: 56px;
-    right: 10px;
-    z-index: 10010;
-    width: 210px;
-    max-height: 205px;
-    padding: 9px;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    align-content: flex-start;
-    gap: 7px;
-    overflow: auto;
-    border: 1px solid #dfe4eb;
-    border-radius: 10px;
-    box-shadow: 0 2px 12px #0002;
-}
-.app.writing-fullscreen .toolbar > * { display: none !important; }
-.app.writing-fullscreen .toolbar #tool {
-    display: block !important;
-    width: 100%;
-}
-.app.writing-fullscreen .toolbar #color,
-.app.writing-fullscreen .toolbar #thickness,
-.app.writing-fullscreen .toolbar #thicknessValue,
-.app.writing-fullscreen .toolbar #undo,
-.app.writing-fullscreen .toolbar #clear {
-    display: inline-block !important;
-}
-.app.writing-fullscreen .toolbar #thickness {
-    flex: 1;
-    min-width: 65px;
-}
-.app.writing-fullscreen .toolbar #undo,
-.app.writing-fullscreen .toolbar #clear {
-    flex: 1;
-}
-.app.writing-fullscreen .sidebar {
-    display: block;
-    position: fixed;
-    top: 270px;
-    right: 10px;
-    z-index: 10010;
-    width: 210px;
-    min-width: 0;
-    max-height: calc(100dvh - 330px);
-    padding: 9px;
-    overflow: auto;
-    border: 1px solid #dfe4eb;
-    border-radius: 10px;
-    box-shadow: 0 2px 12px #0002;
-}
-.app.writing-fullscreen .sidebar > h3,
-.app.writing-fullscreen .sidebar > p,
-.app.writing-fullscreen .sidebar > #topics,
-.app.writing-fullscreen .sidebar #clearTopicCanvas {
-    display: none !important;
-}
-.app.writing-fullscreen .sidebar #topicCanvas {
-    height: 55px;
-}
-.app.writing-fullscreen .sidebar > div[style*="display:flex"] {
-    margin-top: 5px !important;
-}
-.app.writing-fullscreen .sidebar #addTopic {
-    display: block;
-    width: 100%;
-    min-height: 36px;
-}
+.floating-controls button, .floating-controls select { min-height:34px; }
+.floating-controls #newPage { background:#3769d6;color:#fff; }
+.floating-controls #tool { max-width:145px; }
+.floating-controls #color { width:36px;height:34px;padding:0;border:0;background:transparent; }
+.floating-controls #undo, .floating-controls #clear { white-space:nowrap; }
+.app.writing-fullscreen header { display:none !important; }
+.app.writing-fullscreen .toolbar { display:none !important; }
+.app.writing-fullscreen .sidebar { display:none !important; }
 .app.writing-fullscreen .top-area {
-    display: block;
-    position: fixed;
-    top: 430px;
-    right: 10px;
-    z-index: 10010;
-    width: 210px;
-    max-height: calc(100dvh - 445px);
-    padding: 8px;
-    overflow: auto;
-    border: 1px solid #dfe4eb;
-    border-radius: 10px;
-    box-shadow: 0 2px 12px #0002;
+    display:block;
+    position:fixed;
+    top:62px;
+    left:50%;
+    right:auto;
+    transform:translateX(-50%);
+    z-index:10020;
+    width:auto;
+    max-width:calc(100vw - 300px);
+    max-height:70px;
+    padding:5px 9px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    border:1px solid #dfe4eb;
+    border-radius:10px;
+    box-shadow:0 2px 10px #0002;
 }
 .app.writing-fullscreen .top-area > .strip-label:nth-of-type(2),
-.app.writing-fullscreen .top-area #pageTabs {
-    display: none !important;
-}
+.app.writing-fullscreen .top-area #pageTabs { display:none !important; }
+.app.writing-fullscreen .top-area > .strip-label:first-child { display:none; }
 .app.writing-fullscreen .top-area #pinnedTabs {
-    flex-wrap: wrap;
-    max-height: none;
-    overflow: visible;
+    display:flex;
+    flex-wrap:nowrap;
+    gap:6px;
+    min-height:0;
+    padding:0;
+    overflow:visible;
+}
+.app.writing-fullscreen .top-area .tab {
+    min-width:65px;
+    max-width:150px;
+    padding:7px 11px;
+    border-radius:8px;
+    font-size:12px;
 }
 .app.writing-fullscreen .fullscreen-exit {
-    top: 10px;
-    left: 10px;
-    right: auto;
+    top:10px;left:10px;right:auto;
 }
-@media(max-height:700px) {
-    .app.writing-fullscreen .sidebar { top: 255px; max-height: 150px; }
-    .app.writing-fullscreen .top-area { top: 420px; max-height: 125px; }
+@media(max-width:700px) {
+    .app.writing-fullscreen .floating-controls {
+        top:auto;bottom:10px;left:50%;max-width:calc(100vw - 18px);
+        justify-content:center;transform:translateX(-50%);
+    }
+    .app.writing-fullscreen .top-area {
+        top:58px;max-width:calc(100vw - 18px);
+    }
+    .app.writing-fullscreen .quick-palette {
+        top:115px;left:8px;width:130px;max-height:calc(100dvh - 180px);
+    }
 }
-
 
 /* پنل رنگ‌های محبوب و نمونه قلم‌ها در سمت چپ تمام‌صفحه */
 .quick-palette {
@@ -901,6 +781,107 @@ canvas {
 
 <script>
 const $ = id => document.getElementById(id);
+
+/* رنگ‌های محبوب و انتخاب سریع نمونه قلم با لمس یا قلم نوری */
+const FAVORITE_COLORS_KEY = 'notebook_favorite_colors_v1';
+const defaultFavoriteColors = [
+    '#20242c', '#e53935', '#1e88e5', '#43a047',
+    '#8e24aa', '#fb8c00', '#00897b', '#5e35b1',
+    '#ec407a', '#795548'
+];
+let favoriteColors;
+try {
+    favoriteColors = JSON.parse(localStorage.getItem(FAVORITE_COLORS_KEY) || 'null');
+} catch(error) {
+    favoriteColors = null;
+}
+if(!Array.isArray(favoriteColors) || !favoriteColors.length) {
+    favoriteColors = [...defaultFavoriteColors];
+}
+const penSampleOptions = [
+    {value:'ballpoint', label:'خودکار'},
+    {value:'fine', label:'روان‌نویس'},
+    {value:'fountain', label:'خودنویس'},
+    {value:'pencil', label:'مداد'},
+    {value:'brush', label:'قلم‌مویی'},
+    {value:'marker', label:'ماژیک'},
+    {value:'highlighter', label:'هایلایتر'},
+    {value:'calligraphy', label:'خوشنویسی'},
+    {value:'eraser', label:'پاک‌کن'}
+];
+function saveFavoriteColors() {
+    try { localStorage.setItem(FAVORITE_COLORS_KEY, JSON.stringify(favoriteColors)); } catch(error) {}
+}
+function renderFavoriteColors() {
+    const container = $('favoriteColors');
+    if(!container) return;
+    container.innerHTML = '';
+    favoriteColors.forEach(color => {
+        const swatch = document.createElement('button');
+        swatch.type = 'button';
+        swatch.className = 'favorite-color' + ($('color').value.toLowerCase() === color.toLowerCase() ? ' selected' : '');
+        swatch.style.background = color;
+        swatch.title = color;
+        swatch.setAttribute('aria-label', 'انتخاب رنگ ' + color);
+        swatch.addEventListener('click', () => {
+            $('color').value = color;
+            renderFavoriteColors();
+        });
+        container.appendChild(swatch);
+    });
+}
+function renderPenSamples() {
+    const container = $('penSamples');
+    if(!container) return;
+    const shapes = {
+        ballpoint:'M4 20 C15 4 24 28 36 13 S57 7 70 18',
+        fine:'M4 18 Q18 7 30 18 T70 18',
+        fountain:'M4 20 C18 2 26 30 40 14 S58 8 70 17',
+        pencil:'M4 18 L14 13 L24 20 L34 10 L44 18 L56 9 L70 16',
+        brush:'M4 21 Q18 2 31 18 T70 12',
+        marker:'M4 18 Q20 5 34 17 T70 15',
+        highlighter:'M4 18 L18 12 L30 19 L44 10 L58 17 L70 12',
+        calligraphy:'M4 20 Q18 2 30 18 T70 10',
+        eraser:'M4 18 L18 18 M25 18 L38 18 M45 18 L70 18'
+    };
+    container.innerHTML = '';
+    penSampleOptions.forEach(option => {
+        const sample = document.createElement('button');
+        sample.type = 'button';
+        sample.className = 'pen-sample' + ($('tool').value === option.value ? ' selected' : '');
+        sample.dataset.tool = option.value;
+        sample.title = option.label;
+        sample.setAttribute('aria-label', 'انتخاب ' + option.label);
+        sample.innerHTML = '<span class="pen-sample-name"></span><svg viewBox="0 0 74 28" aria-hidden="true"><path d="' + shapes[option.value] + '"/></svg>';
+        sample.querySelector('.pen-sample-name').textContent = option.label;
+        sample.style.setProperty('--sample-color', $('color').value);
+        sample.addEventListener('click', () => {
+            $('tool').value = option.value;
+            $('tool').dispatchEvent(new Event('change', {bubbles:true}));
+            renderPenSamples();
+        });
+        container.appendChild(sample);
+    });
+}
+$('addFavoriteColor').addEventListener('click', () => {
+    const chosen = $('favoriteColorPicker').value.toLowerCase();
+    if(!favoriteColors.some(color => color.toLowerCase() === chosen)) {
+        favoriteColors.push(chosen);
+        saveFavoriteColors();
+        renderFavoriteColors();
+    }
+    $('color').value = chosen;
+    renderFavoriteColors();
+});
+$('color').addEventListener('input', () => {
+    renderFavoriteColors();
+    renderPenSamples();
+});
+$('tool').addEventListener('change', renderPenSamples);
+renderFavoriteColors();
+renderPenSamples();
+
+
 
 const KEY = 'notebook_topics_v3';
 
@@ -1623,6 +1604,50 @@ window.addEventListener('blur', save);
 document.addEventListener('visibilitychange', () => {
     if(document.visibilityState === 'hidden') save();
 });
+
+/* انتقال کنترل‌های پرکاربرد به نوار شناور قابل جابه‌جایی با قلم یا لمس */
+const floatingControls = document.createElement('div');
+floatingControls.className = 'floating-controls';
+floatingControls.id = 'floatingControls';
+const dragHandle = document.createElement('div');
+dragHandle.className = 'drag-handle';
+dragHandle.textContent = '⠿';
+dragHandle.title = 'برای جابه‌جایی، این دستگیره را با قلم بکشید';
+floatingControls.appendChild(dragHandle);
+['newPage','tool','color','undo','clear'].forEach(id => {
+    const node = $(id);
+    if(node) floatingControls.appendChild(node);
+});
+document.body.appendChild(floatingControls);
+
+let dockDragging = false;
+let dockPointerId = null;
+let dockOffsetX = 0;
+let dockOffsetY = 0;
+dragHandle.addEventListener('pointerdown', e => {
+    if(!appElement.classList.contains('writing-fullscreen')) return;
+    e.preventDefault();
+    dockDragging = true;
+    dockPointerId = e.pointerId;
+    const rect = floatingControls.getBoundingClientRect();
+    dockOffsetX = e.clientX - rect.left;
+    dockOffsetY = e.clientY - rect.top;
+    floatingControls.style.left = rect.left + 'px';
+    floatingControls.style.top = rect.top + 'px';
+    floatingControls.style.transform = 'none';
+    dragHandle.setPointerCapture(e.pointerId);
+});
+dragHandle.addEventListener('pointermove', e => {
+    if(!dockDragging || e.pointerId !== dockPointerId) return;
+    e.preventDefault();
+    const maxLeft = Math.max(0, window.innerWidth - floatingControls.offsetWidth);
+    const maxTop = Math.max(0, window.innerHeight - floatingControls.offsetHeight);
+    floatingControls.style.left = Math.min(maxLeft, Math.max(0, e.clientX - dockOffsetX)) + 'px';
+    floatingControls.style.top = Math.min(maxTop, Math.max(0, e.clientY - dockOffsetY)) + 'px';
+});
+function stopDockDrag() { dockDragging = false; dockPointerId = null; }
+dragHandle.addEventListener('pointerup', stopDockDrag);
+dragHandle.addEventListener('pointercancel', stopDockDrag);
 
 /* شروع برنامه */
 
