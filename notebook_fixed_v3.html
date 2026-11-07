@@ -257,7 +257,7 @@ main {
 
 #topicCanvas {
     width: 100%;
-    height: 105px;
+    height: 180px;
     display: block;
     background: #fff;
     border: 1px solid #cfd7e3;
@@ -547,7 +547,7 @@ canvas {
                 <option value="fine" selected>روان‌نویس</option>
                 <option value="eraser">پاک‌کن</option>
             </select>
-            <input type="number" id="topicPenSize" min="1" max="100" value="20"
+            <input type="number" id="topicPenSize" min="1" max="100" value="2"
                    title="اندازه قلم" style="width:65px;padding:6px;border:1px solid #dce1e8;border-radius:7px">
             <input type="color" id="topicPenColor" value="#20242c" title="رنگ قلم">
         </div>
@@ -1154,10 +1154,6 @@ requestAnimationFrame(resizeTopicCanvas);
 /* ابزارها */
 
 $('addTopic').onclick = addTopic;
-$('topicInput').addEventListener('keydown', e => {
-    if(e.key === 'Enter') addTopic();
-});
-
 $('newPage').onclick = newPage;
 
 /* حالت تمام‌صفحه محیط نوشتن */
@@ -1171,18 +1167,27 @@ function setWritingFullscreen(enabled) {
     requestAnimationFrame(renderPaper);
 }
 
-async function toggleWritingFullscreen() {
+async async function toggleWritingFullscreen() {
     const entering = !appElement.classList.contains('writing-fullscreen');
-    setWritingFullscreen(entering);
 
-    try {
-        if(entering && !document.fullscreenElement && document.documentElement.requestFullscreen) {
-            await document.documentElement.requestFullscreen();
-        } else if(!entering && document.fullscreenElement && document.exitFullscreen) {
-            await document.exitFullscreen();
+    if(!entering) {
+        setWritingFullscreen(false);
+        if(document.fullscreenElement && document.exitFullscreen) {
+            try { await document.exitFullscreen(); } catch(error) {}
         }
-    } catch(error) {
-        // در صورت پشتیبانی‌نشدن Fullscreen API، حالت تمام‌صفحه داخلی فعال می‌ماند.
+        return;
+    }
+
+    // ابتدا حالت تمام‌صفحه داخلی را فعال می‌کنیم تا حتی در محیط‌هایی
+    // که Fullscreen API را محدود کرده‌اند، فضای نوشتن بزرگ شود.
+    setWritingFullscreen(true);
+
+    if(!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        try {
+            await document.documentElement.requestFullscreen();
+        } catch(error) {
+            // حالت تمام‌صفحه داخلی همچنان فعال می‌ماند.
+        }
     }
 }
 
