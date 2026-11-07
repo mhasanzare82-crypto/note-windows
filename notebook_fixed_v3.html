@@ -1578,6 +1578,21 @@ function drawStrokeToContext(target, stroke, width, height) {
             const angle=Math.atan2(dy,dx);
             const pressure=stroke.usePressure ? Math.max(.15,((a.pressure||.5)+(b.pressure||.5))/2) : 1;
             let factor=1;
+            if(tool==='oblique') {
+                // زاویه نوک قلم نسبت به صفحه ثابت است و با جهت حرکت دست تغییر نمی‌کند.
+                const nibAngle = Math.PI / 4;
+                const halfWidth = Math.max(.45, stroke.size * mult * pressure) / 2;
+                const nx = -Math.sin(nibAngle) * halfWidth;
+                const ny = Math.cos(nibAngle) * halfWidth;
+                target.beginPath();
+                target.moveTo(a.x*width - nx, a.y*height - ny);
+                target.lineTo(b.x*width - nx, b.y*height - ny);
+                target.lineTo(b.x*width + nx, b.y*height + ny);
+                target.lineTo(a.x*width + nx, a.y*height + ny);
+                target.closePath();
+                target.fill();
+                continue;
+            }
             if(tool==='calligraphy') factor=.28+.92*Math.abs(Math.sin(angle));
             else if(tool==='fountain') factor=.72+pressure*.48;
             else if(tool==='brush') factor=.82+pressure*.38;
@@ -1588,11 +1603,6 @@ function drawStrokeToContext(target, stroke, width, height) {
                 const speedFactor=Math.max(.78,Math.min(1.12,1.08-distance/32));
                 factor=(.88+pressure*.18)*speedFactor;
             } else if(tool==='titr') factor=.92+pressure*.28;
-            else if(tool==='oblique') {
-                // نوک تخت مورب: زاویه ثابت لبه باعث تغییر پهنا با جهت حرکت می‌شود.
-                const nibAngle = Math.PI / 4;
-                factor = .16 + .98 * Math.abs(Math.sin(angle - nibAngle));
-            }
             target.beginPath();
             target.lineWidth=Math.max(.45,stroke.size*mult*pressure*factor);
             target.moveTo(a.x*width,a.y*height);
