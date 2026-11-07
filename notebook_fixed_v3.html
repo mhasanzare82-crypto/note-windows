@@ -691,6 +691,17 @@ canvas {
     color: #2456bd;
     font-size: 11px;
 }
+.palette-save-image {
+    width: 100%;
+    margin-top: 7px;
+    padding: 8px;
+    border: 1px solid #b8dfcb;
+    border-radius: 7px;
+    background: #edf8f1;
+    color: #17643b;
+    font-size: 11px;
+    cursor: pointer;
+}
 .pen-samples {
     display: flex;
     flex-direction: column;
@@ -858,6 +869,7 @@ canvas {
         <output id="paletteThicknessValue">20</output>
     </div>
     <button type="button" class="palette-undo" id="paletteUndo">↶ بازگشت آخرین حرکت</button>
+    <button type="button" class="palette-save-image" id="savePageImage">⬇ ذخیره صفحه به‌صورت عکس</button>
 </aside>
 
 
@@ -1093,6 +1105,32 @@ $('thickness').addEventListener('input', () => {
     $('paletteThicknessValue').textContent = $('thickness').value;
 });
 $('paletteUndo').addEventListener('click', () => $('undo').click());
+$('savePageImage').addEventListener('click', () => {
+    if(drawing) {
+        $('status').textContent = 'ابتدا نوشتن را تمام کنید و دوباره ذخیره را بزنید';
+        return;
+    }
+    const currentTopic = topic();
+    const currentPage = page();
+    if(!currentTopic || !currentPage) return;
+
+    try {
+        const link = document.createElement('a');
+        const safeName = value => String(value || '')
+            .replace(/[\\\\/:*?"<>|]/g, '-')
+            .replace(/\\s+/g, '_')
+            .slice(0, 60);
+        link.download = safeName(currentTopic.name || 'موضوع') + '_' +
+            safeName(currentPage.name || 'صفحه') + '.png';
+        link.href = canvas.toDataURL('image/png');
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        $('status').textContent = '✓ تصویر صفحه با فرمت PNG ذخیره شد';
+    } catch(error) {
+        $('status').textContent = 'ذخیره تصویر انجام نشد';
+    }
+});
 $('tool').addEventListener('change', () => {
     renderPenSamples();
     if($('tool').value !== 'eraser') largeEraser.classList.remove('active');
