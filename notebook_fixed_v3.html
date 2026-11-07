@@ -1,0 +1,1227 @@
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>دفتر یادداشت</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+body {
+    font-family: Tahoma, Arial;
+    background: #eef1f5;
+    color: #263244;
+}
+
+button, input, select {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+    border: 0;
+    border-radius: 7px;
+    padding: 7px 10px;
+    background: #edf0f5;
+    color: #263244;
+}
+
+button:hover {
+    filter: brightness(.96);
+}
+
+/* کل برنامه */
+.app {
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* سربرگ */
+header {
+    height: 48px;
+    min-height: 48px;
+    background: white;
+    border-bottom: 1px solid #e0e5ec;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px;
+    flex-shrink: 0;
+}
+
+header h3 {
+    font-size: 14px;
+    margin: 0;
+}
+
+.primary {
+    background: #3769d6;
+    color: white;
+}
+
+/* چیدمان اصلی */
+.layout {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+}
+
+/* فضای اصلی نوشتن */
+main {
+    order: 1;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* مدیریت موضوعات - سمت راست */
+.sidebar {
+    order: 0;
+    width: 235px;
+    min-width: 190px;
+    flex-shrink: 0;
+    background: white;
+    border-left: 1px solid #dfe4eb;
+    padding: 12px;
+    overflow: auto;
+    transition: width .2s, padding .2s;
+}
+
+.sidebar.closed {
+    width: 0;
+    min-width: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+}
+
+.sidebar h3 {
+    font-size: 14px;
+    margin: 4px 0 12px;
+}
+
+.sidebar input {
+    width: 100%;
+    padding: 9px;
+    border: 1px solid #dce1e8;
+    border-radius: 7px;
+    margin-bottom: 7px;
+}
+
+.sidebar .add {
+    width: 100%;
+    background: #3769d6;
+    color: white;
+}
+
+.topic {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 5px 0;
+    background: #f4f6fa;
+    border: 1px solid transparent;
+    width: 100%;
+    text-align: right;
+    padding: 8px;
+}
+
+.topic.active {
+    background: #e5edff;
+    border-color: #b8ceff;
+    color: #2456bd;
+}
+
+.topic-name {
+    flex: 1;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pin {
+    padding: 4px;
+    background: transparent;
+    font-size: 15px;
+}
+
+.pin.pinned {
+    color: #d69a16;
+}
+
+/* نوار بالای صفحه */
+.top-area {
+    background: white;
+    border-bottom: 1px solid #e0e5ec;
+    padding: 5px 12px;
+    flex-shrink: 0;
+}
+
+.strip-label {
+    font-size: 10px;
+    color: #7c8796;
+    margin: 0 0 4px;
+}
+
+.tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 2px 0 5px;
+    min-height: 32px;
+    scrollbar-width: thin;
+}
+
+.tab {
+    white-space: nowrap;
+    background: #f0f2f6;
+    border: 1px solid #e0e5ec;
+    font-size: 11px;
+    padding: 6px 11px;
+}
+
+.tab.active {
+    background: #e5edff;
+    border-color: #91b2f4;
+    color: #2456bd;
+}
+
+.tab.new {
+    background: #3769d6;
+    color: white;
+    border-color: #3769d6;
+}
+
+/* فضای کاغذ */
+.paper-area {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    overflow: auto;
+    background: #e7ebf1;
+    padding: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+#topicCanvas {
+    width: 100%;
+    height: 105px;
+    display: block;
+    background: #fff;
+    border: 1px solid #cfd7e3;
+    border-radius: 7px;
+    touch-action: none;
+    cursor: crosshair;
+}
+
+.topic-handwriting {
+    display: block;
+    max-width: 100%;
+    max-height: 34px;
+    object-fit: contain;
+}
+
+.topic-tab-handwriting {
+    display: inline-block;
+    max-width: 110px;
+    max-height: 24px;
+    object-fit: contain;
+    vertical-align: middle;
+}
+
+.paper {
+    background: white;
+    box-shadow: 0 2px 12px #00000018;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+canvas {
+    display: block;
+    touch-action: none;
+    cursor: crosshair;
+}
+
+/* نوار ابزار یکپارچه پایین */
+.toolbar {
+    background: white;
+    border-top: 1px solid #dfe4eb;
+    padding: 6px 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+}
+
+.toolbar select,
+.toolbar input[type=number] {
+    padding: 6px;
+    border: 1px solid #dce1e8;
+    border-radius: 7px;
+    background: white;
+    font-size: 11px;
+    height: 31px;
+}
+
+.toolbar input[type=color] {
+    width: 31px;
+    height: 31px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    flex-shrink: 0;
+}
+
+.toolbar input[type=range] {
+    width: 65px;
+    cursor: pointer;
+}
+
+.tool {
+    font-size: 11px;
+    border: 1px solid #e0e5ec;
+    padding: 7px 9px;
+    white-space: nowrap;
+}
+
+.tool.active {
+    background: #e5edff;
+    border-color: #91b2f4;
+    color: #2456bd;
+}
+
+.sep {
+    height: 25px;
+    border-right: 1px solid #e0e5ec;
+    flex-shrink: 0;
+}
+
+.small {
+    font-size: 10px;
+    color: #788394;
+    white-space: nowrap;
+}
+
+.sizebox {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+.sizebox input {
+    width: 48px;
+}
+
+.status {
+    font-size: 10px;
+    color: #718096;
+    white-space: nowrap;
+}
+
+/* صفحه‌های کوچک */
+@media(max-width:760px) {
+    header {
+        padding: 0 6px;
+        height: 43px;
+        min-height: 43px;
+    }
+
+    header h3 {
+        font-size: 12px;
+    }
+
+    .sidebar {
+        width: 200px;
+        min-width: 180px;
+    }
+
+    .sidebar.closed {
+        width: 0;
+        min-width: 0;
+    }
+
+    .top-area {
+        padding: 4px 7px;
+    }
+
+    .paper-area {
+        padding: 3px;
+    }
+
+    .toolbar {
+        justify-content: flex-start;
+        gap: 5px;
+        padding: 5px;
+    }
+
+    .toolbar input[type=range] {
+        width: 48px;
+    }
+
+    .tool {
+        padding: 6px;
+    }
+}
+
+@media(max-width:420px) {
+    .sidebar {
+        width: 165px;
+        min-width: 155px;
+    }
+
+    header h3 {
+        font-size: 11px;
+    }
+
+    header {
+        gap: 5px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<header>
+    <button id="toggle">☰</button>
+    <h3>📓 دفتر یادداشت</h3>
+    <span class="small" id="activeName"></span>
+    <span style="flex:1"></span>
+    <button class="primary" id="newPage">＋ صفحه جدید</button>
+</header>
+
+<div class="layout">
+
+    <main>
+
+        <!-- نوار موضوعات پین شده و صفحات -->
+        <div class="top-area">
+
+            <div class="strip-label">⭐ موضوعات پین‌شده</div>
+            <div class="tabs" id="pinnedTabs"></div>
+
+            <div class="strip-label">صفحه‌های موضوع انتخاب‌شده</div>
+            <div class="tabs" id="pageTabs"></div>
+
+        </div>
+
+        <!-- محیط نوشتن -->
+        <div class="paper-area" id="paperArea">
+            <div class="paper" id="paper">
+                <canvas id="canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- تمام ابزارها در یک نوار پایین -->
+        <div class="toolbar">
+
+            <select id="tool" title="نوع قلم">
+                <option value="ballpoint">خودکار</option>
+                <option value="fine" selected>روان‌نویس</option>
+                <option value="fountain">خودنویس</option>
+                <option value="pencil">مداد</option>
+                <option value="brush">قلم‌مویی</option>
+                <option value="marker">ماژیک</option>
+                <option value="highlighter">هایلایتر</option>
+                <option value="calligraphy">خوشنویسی</option>
+                <option value="eraser">پاک‌کن</option>
+            </select>
+
+            <input type="color" id="color"
+                   value="#20242c" title="انتخاب رنگ">
+
+            <span class="small">ضخامت</span>
+            <input type="range" id="thickness"
+                   min="1" max="100" value="20">
+
+            <span id="thicknessValue" class="small">20</span>
+
+            <span class="sep"></span>
+
+            <span class="small">کاغذ</span>
+
+            <div class="sizebox">
+                <span>عرض</span>
+                <input type="number" id="paperWidth"
+                       min="5" max="100" value="21">
+
+                <span>ارتفاع</span>
+                <input type="number" id="paperHeight"
+                       min="5" max="150" value="29.7">
+
+                <button id="applySize">اعمال</button>
+            </div>
+
+            <span class="sep"></span>
+
+            <span class="small">بزرگ‌نمایی</span>
+            <button class="tool" id="zoomOut" title="کوچک‌نمایی">−</button>
+            <span class="status" id="zoomValue">100٪</span>
+            <button class="tool" id="zoomIn" title="بزرگ‌نمایی">＋</button>
+            <button class="tool" id="zoomFit">متناسب</button>
+
+            <span class="sep"></span>
+
+            <button class="tool" id="undo">↶ بازگشت</button>
+            <button class="tool" id="clear">پاک کردن</button>
+
+            <span class="status" id="status">ذخیره خودکار فعال است</span>
+
+        </div>
+
+    </main>
+
+    <!-- مدیریت موضوعات در سمت راست -->
+    <aside class="sidebar" id="sidebar">
+
+        <h3>📁 مدیریت موضوعات</h3>
+
+        <p class="small">نام موضوع را با قلم نوری در کادر زیر بنویسید.</p>
+        <canvas id="topicCanvas" aria-label="محل نوشتن نام موضوع"></canvas>
+        <div style="display:flex;gap:5px;margin:6px 0">
+            <select id="topicPenTool" style="flex:1;padding:7px;border:1px solid #dce1e8;border-radius:7px">
+                <option value="fine" selected>روان‌نویس</option>
+                <option value="eraser">پاک‌کن</option>
+            </select>
+            <input type="number" id="topicPenSize" min="1" max="100" value="20"
+                   title="اندازه قلم" style="width:65px;padding:6px;border:1px solid #dce1e8;border-radius:7px">
+            <input type="color" id="topicPenColor" value="#20242c" title="رنگ قلم">
+        </div>
+        <div style="display:flex;gap:5px">
+            <button id="clearTopicCanvas" style="flex:1">پاک‌کردن نوشته</button>
+            <button class="add" id="addTopic" style="flex:1">＋ ایجاد موضوع</button>
+        </div>
+
+        <p class="small">
+            برای نمایش موضوع در بالای صفحه، روی ⭐ کنار آن بزن.
+        </p>
+
+        <div id="topics"></div>
+
+    </aside>
+
+</div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+const KEY = 'notebook_topics_v3';
+
+let data;
+
+try {
+    data = JSON.parse(localStorage.getItem(KEY) || 'null');
+} catch(e) {
+    data = null;
+}
+
+data = data || {
+    topics: [{
+        id: 1,
+        name: 'یادداشت‌های من',
+        pinned: true,
+        pages: [{
+            id: 11,
+            name: 'صفحه ۱',
+            width: 29.7,
+            height: 21,
+            strokes: []
+        }]
+    }],
+    activeTopic: 1,
+    activePage: 11
+};
+
+let drawing = false;
+let activeStroke = null;
+
+const canvas = $('canvas');
+const paper = $('paper');
+const paperArea = $('paperArea');
+
+const ctx = canvas.getContext('2d');
+
+let displayWidth = 0;
+let displayHeight = 0;
+let pixelRatio = 1;
+let zoomLevel = 1;
+
+const topic = () =>
+    data.topics.find(t => t.id === data.activeTopic);
+
+const page = () =>
+    topic()?.pages.find(p => p.id === data.activePage);
+
+/* ذخیره اطلاعات */
+
+function save() {
+    try {
+        localStorage.setItem(KEY, JSON.stringify(data));
+        $('status').textContent = '✓ ذخیره شد';
+    } catch(e) {
+        $('status').textContent =
+            'فضای ذخیره‌سازی مرورگر کافی نیست';
+    }
+}
+
+/* نمایش موضوعات و صفحات */
+
+function render() {
+    $('topics').innerHTML = '';
+    $('pinnedTabs').innerHTML = '';
+    $('pageTabs').innerHTML = '';
+
+    data.topics.forEach(t => {
+
+        const row = document.createElement('div');
+
+        row.className = 'topic' +
+            (t.id === data.activeTopic ? ' active' : '');
+
+        const name = document.createElement('button');
+
+        name.className = 'topic-name';
+        if(t.handwriting) {
+            const img = document.createElement('img');
+            img.src = t.handwriting;
+            img.alt = t.name || 'موضوع دست‌نویس';
+            img.className = 'topic-handwriting';
+            name.appendChild(img);
+        } else {
+            name.textContent = t.name;
+        }
+        name.onclick = () => selectTopic(t.id);
+
+        const pin = document.createElement('button');
+
+        pin.className = 'pin' + (t.pinned ? ' pinned' : '');
+        pin.textContent = t.pinned ? '★' : '☆';
+
+        pin.onclick = () => {
+            t.pinned = !t.pinned;
+            save();
+            render();
+        };
+
+        const del = document.createElement('button');
+
+        del.className = 'pin';
+        del.textContent = '×';
+        del.title = 'حذف موضوع';
+        del.onclick = () => deleteTopic(t.id);
+
+        row.append(name, pin, del);
+        $('topics').appendChild(row);
+
+        if(t.pinned) {
+            const tab = document.createElement('button');
+
+            tab.className = 'tab' +
+                (t.id === data.activeTopic ? ' active' : '');
+
+            if(t.handwriting) {
+                tab.textContent = '★ ';
+                const img = document.createElement('img');
+                img.src = t.handwriting;
+                img.alt = t.name || 'موضوع دست‌نویس';
+                img.className = 'topic-tab-handwriting';
+                tab.appendChild(img);
+            } else {
+                tab.textContent = '★ ' + t.name;
+            }
+            tab.onclick = () => selectTopic(t.id);
+
+            $('pinnedTabs').appendChild(tab);
+        }
+    });
+
+    if(!$('pinnedTabs').children.length) {
+        $('pinnedTabs').innerHTML =
+            '<span class="small">هنوز موضوعی پین نشده است.</span>';
+    }
+
+    const t = topic();
+
+    if(t) {
+        t.pages.forEach(p => {
+            const tab = document.createElement('button');
+
+            tab.className = 'tab' +
+                (p.id === data.activePage ? ' active' : '');
+
+            tab.textContent = p.name;
+            tab.onclick = () => selectPage(p.id);
+
+            $('pageTabs').appendChild(tab);
+        });
+
+        $('activeName').textContent = 'موضوع: ' + t.name;
+    }
+
+    renderPaper();
+}
+
+/* انتخاب موضوع */
+
+function selectTopic(id) {
+    data.activeTopic = id;
+    data.activePage = topic().pages[0].id;
+
+    render();
+    save();
+}
+
+/* انتخاب صفحه */
+
+function selectPage(id) {
+    data.activePage = id;
+    render();
+    save();
+}
+
+/* ایجاد موضوع */
+
+function addTopic() {
+    if(!topicHasInk) {
+        alert('لطفاً نام موضوع را با قلم در کادر بنویسید.');
+        return;
+    }
+
+    const id = Date.now();
+    const handwriting = topicCanvas.toDataURL('image/png');
+
+    data.topics.push({
+        id,
+        name: 'موضوع ' + (data.topics.length + 1),
+        handwriting,
+        pinned: false,
+        pages: [{
+            id: id + 1,
+            name: 'صفحه ۱',
+            width: 29.7,
+            height: 21,
+            strokes: []
+        }]
+    });
+
+    data.activeTopic = id;
+    data.activePage = id + 1;
+    clearTopicWriting();
+    render();
+    save();
+}
+
+/* حذف موضوع */
+
+function deleteTopic(id) {
+    if(data.topics.length === 1) {
+        alert('حداقل یک موضوع باید باقی بماند.');
+        return;
+    }
+
+    const t = data.topics.find(x => x.id === id);
+
+    if(!confirm('موضوع «' + t.name +
+        '» و صفحه‌های آن حذف شود؟')) return;
+
+    data.topics = data.topics.filter(x => x.id !== id);
+
+    if(data.activeTopic === id) {
+        data.activeTopic = data.topics[0].id;
+        data.activePage = topic().pages[0].id;
+    }
+
+    render();
+    save();
+}
+
+/* صفحه جدید */
+
+function newPage() {
+    const t = topic();
+    const id = Date.now();
+
+    t.pages.push({
+        id,
+        name: 'صفحه ' + (t.pages.length + 1),
+        width: 29.7,
+        height: 21,
+        strokes: []
+    });
+
+    data.activePage = id;
+
+    render();
+    save();
+}
+
+/* محاسبه اندازه کاغذ و نمایش متناسب با محیط */
+
+function renderPaper() {
+    const p = page();
+    if(!p) return;
+
+    $('paperWidth').value = p.width;
+    $('paperHeight').value = p.height;
+
+    // نسبت واقعی ابعاد کاغذ
+    const physicalWidth = p.width / 2.54 * 96;
+    const physicalHeight = p.height / 2.54 * 96;
+
+    // فضای در دسترس
+    const availableWidth = Math.max(
+        100,
+        paperArea.clientWidth - 10
+    );
+
+    const availableHeight = Math.max(
+        100,
+        paperArea.clientHeight - 10
+    );
+
+    // بزرگ‌نمایی متناسب با فضای موجود
+    const scale = Math.min(
+        availableWidth / physicalWidth,
+        availableHeight / physicalHeight
+    );
+
+    displayWidth = physicalWidth * scale * zoomLevel;
+    displayHeight = physicalHeight * scale * zoomLevel;
+
+    paper.style.width = displayWidth + 'px';
+    paper.style.height = displayHeight + 'px';
+
+    pixelRatio = window.devicePixelRatio || 1;
+
+    canvas.style.width = displayWidth + 'px';
+    canvas.style.height = displayHeight + 'px';
+
+    canvas.width = Math.round(displayWidth * pixelRatio);
+    canvas.height = Math.round(displayHeight * pixelRatio);
+
+    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+
+    redraw();
+}
+
+/* رسم خطوط */
+
+function drawStroke(s) {
+    if(!s.points || !s.points.length) return;
+
+    ctx.save();
+
+    ctx.globalCompositeOperation =
+        s.tool === 'eraser' ? 'destination-out' : 'source-over';
+
+    let alpha = 1;
+    let mult = 1;
+
+    switch(s.tool) {
+        case 'fine':
+            mult = .55;
+            break;
+
+        case 'fountain':
+            mult = 1.2;
+            break;
+
+        case 'pencil':
+            mult = .8;
+            alpha = .55;
+            break;
+
+        case 'brush':
+            mult = 1.8;
+            break;
+
+        case 'marker':
+            mult = 1.7;
+            alpha = .75;
+            break;
+
+        case 'highlighter':
+            mult = 3;
+            alpha = .25;
+            break;
+
+        case 'calligraphy':
+            mult = 1.5;
+            break;
+
+        case 'eraser':
+            mult = 3;
+            break;
+    }
+
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = s.color;
+    ctx.fillStyle = s.color;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    const pts = s.points;
+
+    if(pts.length === 1) {
+        const p = pts[0];
+
+        const pressure = s.usePressure
+            ? Math.max(.15, p.pressure || .5)
+            : 1;
+
+        ctx.beginPath();
+
+        ctx.arc(
+            p.x * displayWidth,
+            p.y * displayHeight,
+            s.size * mult * pressure / 2,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+    } else {
+        for(let i = 1; i < pts.length; i++) {
+            const p1 = pts[i - 1];
+            const p2 = pts[i];
+
+            const pressure = s.usePressure
+                ? Math.max(.15,
+                    ((p1.pressure || .5) +
+                     (p2.pressure || .5)) / 2)
+                : 1;
+
+            ctx.beginPath();
+
+            ctx.lineWidth = Math.max(
+                .5,
+                s.size * mult * pressure
+            );
+
+            ctx.moveTo(
+                p1.x * displayWidth,
+                p1.y * displayHeight
+            );
+
+            ctx.lineTo(
+                p2.x * displayWidth,
+                p2.y * displayHeight
+            );
+
+            ctx.stroke();
+        }
+    }
+
+    ctx.restore();
+}
+
+/* بازسازی صفحه */
+
+function redraw() {
+    if(!displayWidth || !displayHeight) return;
+
+    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+
+    ctx.clearRect(0, 0, displayWidth, displayHeight);
+
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, displayWidth, displayHeight);
+
+    const p = page();
+
+    if(!p) return;
+
+    p.strokes.forEach(s => drawStroke(s));
+}
+
+/* دریافت مختصات قلم */
+
+function getPoint(e) {
+    const r = canvas.getBoundingClientRect();
+
+    return {
+        x: (e.clientX - r.left) / r.width,
+        y: (e.clientY - r.top) / r.height,
+        pressure: e.pointerType === 'pen'
+            ? (e.pressure > 0 ? e.pressure : .5)
+            : 1
+    };
+}
+
+/* شروع نوشتن */
+
+function begin(e) {
+
+    // قلم نوری، ماوس و لمس اجازه نوشتن دارند
+    e.preventDefault();
+
+    drawing = true;
+
+    try {
+        canvas.setPointerCapture(e.pointerId);
+    } catch(error) {}
+
+    const p = getPoint(e);
+
+    const tool = $('tool').value;
+
+    activeStroke = {
+        tool,
+        color: $('color').value,
+        size: Number($('thickness').value),
+        usePressure: tool !== 'eraser',
+        points: [p]
+    };
+
+    page().strokes.push(activeStroke);
+
+    redraw();
+}
+
+/* حرکت قلم */
+
+function move(e) {
+    if(!drawing || !activeStroke) return;
+
+    e.preventDefault();
+
+    const events = typeof e.getCoalescedEvents === 'function'
+        ? e.getCoalescedEvents()
+        : [e];
+
+    events.forEach(pointerEvent => {
+        activeStroke.points.push(getPoint(pointerEvent));
+    });
+
+    redraw();
+}
+
+/* پایان نوشتن */
+
+function end(e) {
+    if(!drawing) return;
+
+    drawing = false;
+    activeStroke = null;
+
+    save();
+}
+
+/* رویدادهای قلم */
+
+canvas.addEventListener('pointerdown', begin);
+canvas.addEventListener('pointermove', move);
+canvas.addEventListener('pointerup', end);
+canvas.addEventListener('pointercancel', end);
+canvas.addEventListener('lostpointercapture', end);
+
+canvas.addEventListener('contextmenu', e => {
+    e.preventDefault();
+});
+
+/* کادر دست‌نویس نام موضوع */
+const topicCanvas = $('topicCanvas');
+const topicCtx = topicCanvas.getContext('2d');
+let topicDrawing = false;
+let topicHasInk = false;
+
+function resizeTopicCanvas() {
+    const rect = topicCanvas.getBoundingClientRect();
+    const ratio = window.devicePixelRatio || 1;
+    const old = topicHasInk ? topicCanvas.toDataURL() : null;
+    topicCanvas.width = Math.max(1, Math.round(rect.width * ratio));
+    topicCanvas.height = Math.max(1, Math.round(rect.height * ratio));
+    topicCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    topicCtx.fillStyle = '#fff';
+    topicCtx.fillRect(0, 0, rect.width, rect.height);
+    if(old) {
+        const image = new Image();
+        image.onload = () => topicCtx.drawImage(image, 0, 0, rect.width, rect.height);
+        image.src = old;
+    }
+}
+function clearTopicWriting() {
+    const rect = topicCanvas.getBoundingClientRect();
+    topicCtx.save();
+    topicCtx.setTransform(1, 0, 0, 1, 0, 0);
+    topicCtx.clearRect(0, 0, topicCanvas.width, topicCanvas.height);
+    topicCtx.restore();
+    topicCtx.fillStyle = '#fff';
+    topicCtx.fillRect(0, 0, rect.width, rect.height);
+    topicHasInk = false;
+}
+function topicPointerPoint(e) {
+    const r = topicCanvas.getBoundingClientRect();
+    return {x:e.clientX-r.left, y:e.clientY-r.top};
+}
+topicCanvas.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    topicDrawing = true;
+    topicHasInk = true;
+    topicCanvas.setPointerCapture(e.pointerId);
+    const p = topicPointerPoint(e);
+    topicCtx.beginPath();
+    topicCtx.moveTo(p.x, p.y);
+});
+topicCanvas.addEventListener('pointermove', e => {
+    if(!topicDrawing) return;
+    e.preventDefault();
+    const p = topicPointerPoint(e);
+    const erasing = $('topicPenTool').value === 'eraser';
+    topicCtx.globalCompositeOperation = erasing ? 'destination-out' : 'source-over';
+    topicCtx.strokeStyle = $('topicPenColor').value;
+    topicCtx.lineWidth = Math.max(1, Number($('topicPenSize').value) || 20) *
+        (e.pointerType === 'pen' && e.pressure > 0 ? e.pressure : 1);
+    topicCtx.lineCap = 'round';
+    topicCtx.lineJoin = 'round';
+    topicCtx.lineTo(p.x, p.y);
+    topicCtx.stroke();
+});
+function endTopicPointer() {
+    topicDrawing = false;
+    topicCtx.globalCompositeOperation = 'source-over';
+}
+topicCanvas.addEventListener('pointerup', endTopicPointer);
+topicCanvas.addEventListener('pointercancel', endTopicPointer);
+$('clearTopicCanvas').onclick = clearTopicWriting;
+requestAnimationFrame(resizeTopicCanvas);
+
+/* ابزارها */
+
+$('addTopic').onclick = addTopic;
+$('topicInput').addEventListener('keydown', e => {
+    if(e.key === 'Enter') addTopic();
+});
+
+$('newPage').onclick = newPage;
+
+$('toggle').onclick = () => {
+    $('sidebar').classList.toggle('closed');
+
+    setTimeout(renderPaper, 220);
+};
+
+$('thickness').oninput = e => {
+    $('thicknessValue').textContent = e.target.value;
+};
+
+function setZoom(value) {
+    zoomLevel = Math.min(4, Math.max(0.25, value));
+    $('zoomValue').textContent = Math.round(zoomLevel * 100) + '٪';
+    renderPaper();
+}
+$('zoomIn').onclick = () => setZoom(zoomLevel + 0.1);
+$('zoomOut').onclick = () => setZoom(zoomLevel - 0.1);
+$('zoomFit').onclick = () => setZoom(1);
+
+/* بازگشت */
+
+$('undo').onclick = () => {
+    if(drawing) return;
+
+    const strokes = page().strokes;
+
+    strokes.pop();
+
+    redraw();
+    save();
+};
+
+/* پاک کردن صفحه */
+
+$('clear').onclick = () => {
+    if(!confirm('تمام نوشته‌های این صفحه پاک شود؟')) return;
+
+    page().strokes = [];
+
+    redraw();
+    save();
+};
+
+/* تغییر اندازه کاغذ */
+
+$('applySize').onclick = () => {
+    const w = Number($('paperWidth').value);
+    const h = Number($('paperHeight').value);
+
+    if(!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) {
+        alert('عرض و ارتفاع باید عددی بزرگ‌تر از صفر باشند.');
+        return;
+    }
+
+    page().width = w;
+    page().height = h;
+
+    renderPaper();
+    save();
+};
+
+/* تنظیم مجدد اندازه با تغییر پنجره */
+
+const resizeObserver = new ResizeObserver(() => {
+    renderPaper();
+});
+
+resizeObserver.observe(paperArea);
+window.addEventListener('resize', () => {
+    renderPaper();
+    resizeTopicCanvas();
+});
+
+/* ذخیره خودکار */
+
+// ذخیره دوره‌ای؛ حتی اگر هنگام خروج، قلم هنوز در حال نوشتن باشد
+setInterval(save, 1000);
+
+// ذخیره در زمان ترک صفحه، بستن پنجره یا رفتن برنامه به پس‌زمینه
+window.addEventListener('beforeunload', save);
+window.addEventListener('pagehide', save);
+window.addEventListener('blur', save);
+
+document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'hidden') save();
+});
+
+/* شروع برنامه */
+
+render();
+
+</script>
+</body>
+</html>
