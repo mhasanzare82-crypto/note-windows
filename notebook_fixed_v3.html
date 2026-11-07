@@ -970,21 +970,10 @@ canvas {
 
         <h3>📁 مدیریت موضوعات</h3>
 
-        <p class="small">نام موضوع را با قلم نوری در کادر زیر بنویسید.</p>
-        <canvas id="topicCanvas" aria-label="محل نوشتن نام موضوع"></canvas>
-        <div style="display:flex;gap:5px;margin:6px 0">
-            <select id="topicPenTool" style="flex:1;padding:7px;border:1px solid #dce1e8;border-radius:7px">
-                <option value="fine" selected>روان‌نویس</option>
-                <option value="eraser">پاک‌کن</option>
-            </select>
-            <input type="number" id="topicPenSize" min="1" max="100" value="2"
-                   title="اندازه قلم" style="width:65px;padding:6px;border:1px solid #dce1e8;border-radius:7px">
-            <input type="color" id="topicPenColor" value="#20242c" title="رنگ قلم">
-        </div>
-        <div style="display:flex;gap:5px">
-            <button id="clearTopicCanvas" style="flex:1">پاک‌کردن نوشته</button>
-            <button class="add" id="addTopic" style="flex:1">＋ ایجاد موضوع</button>
-        </div>
+        <p class="small">نام موضوع را تایپ کنید.</p>
+        <input type="text" id="topicNameInput" maxlength="100"
+               placeholder="نام موضوع" autocomplete="off">
+        <button class="add" id="addTopic">＋ ایجاد موضوع</button>
 
         <p class="small">
             برای نمایش موضوع در بالای صفحه، روی ⭐ کنار آن بزن.
@@ -1281,7 +1270,7 @@ $('saveTopic').onclick = () => {
                 format:'notebook-topic',
                 version:1,
                 exportedAt:new Date().toISOString(),
-                topic:{...selectedTopic, pages:undefined}
+                topic:selectedTopic
             }, null, 2)
         }];
 
@@ -1289,14 +1278,8 @@ $('saveTopic').onclick = () => {
             const pageName = (pageData.name || ('صفحه ' + (index + 1)))
                 .replace(/[\\/:*?"<>|]/g, '_').trim() || ('صفحه ' + (index + 1));
             files.push({
-                name: folderName + '/' + String(index + 1).padStart(2, '0') + ' - ' + pageName + '.json',
-                data: JSON.stringify({
-                    format:'notebook-page',
-                    version:1,
-                    topicId:selectedTopic.id,
-                    topicName:selectedTopic.name,
-                    page:pageData
-                }, null, 2)
+                name: folderName + '/' + String(index + 1).padStart(2, '0') + ' - ' + pageName + '.png',
+                data: pageImageBytes(createPageImage(pageData))
             });
         });
 
@@ -1332,15 +1315,7 @@ function render() {
         const name = document.createElement('button');
 
         name.className = 'topic-name';
-        if(t.handwriting) {
-            const img = document.createElement('img');
-            img.src = t.handwriting;
-            img.alt = t.name || 'موضوع دست‌نویس';
-            img.className = 'topic-handwriting';
-            name.appendChild(img);
-        } else {
-            name.textContent = t.name;
-        }
+        name.textContent = t.name;
         name.onclick = () => selectTopic(t.id);
 
         const pin = document.createElement('button');
@@ -1370,16 +1345,7 @@ function render() {
             tab.className = 'tab' +
                 (t.id === data.activeTopic ? ' active' : '');
 
-            if(t.handwriting) {
-                tab.textContent = '★ ';
-                const img = document.createElement('img');
-                img.src = t.handwriting;
-                img.alt = t.name || 'موضوع دست‌نویس';
-                img.className = 'topic-tab-handwriting';
-                tab.appendChild(img);
-            } else {
-                tab.textContent = '★ ' + t.name;
-            }
+            tab.textContent = '★ ' + t.name;
             tab.onclick = () => selectTopic(t.id);
 
             $('pinnedTabs').appendChild(tab);
@@ -1433,18 +1399,18 @@ function selectPage(id) {
 /* ایجاد موضوع */
 
 function addTopic() {
-    if(!topicHasInk) {
-        alert('لطفاً نام موضوع را با قلم در کادر بنویسید.');
+    const name = $('topicNameInput').value.trim();
+    if(!name) {
+        alert('لطفاً نام موضوع را تایپ کنید.');
+        $('topicNameInput').focus();
         return;
     }
 
     const id = Date.now();
-    const handwriting = topicCanvas.toDataURL('image/png');
 
     data.topics.push({
         id,
-        name: 'موضوع ' + (data.topics.length + 1),
-        handwriting,
+        name,
         pinned: false,
         pages: [{
             id: id + 1,
@@ -1457,7 +1423,7 @@ function addTopic() {
 
     data.activeTopic = id;
     data.activePage = id + 1;
-    clearTopicWriting();
+    $('topicNameInput').value = '';
     render();
     save();
 }
@@ -1770,72 +1736,73 @@ canvas.addEventListener('contextmenu', e => {
     e.preventDefault();
 });
 
-/* کادر دست‌نویس نام موضوع */
-const topicCanvas = $('topicCanvas');
-const topicCtx = topicCanvas.getContext('2d');
-let topicDrawing = false;
-let topicHasInk = false;
+/* تولید تصویر PNG هر صفحه برای خروجی موضوع */
+function createPageImage(pageData) {
+    const width = 1800;
+    const height = Math.max(1, Math.round(width * pageData.height / pageData.width));
+    const imageCanvas = document.createElement('canvas');
+    imageCanvas.width = width;
+    imageCanvas.height = height;
+    const imageCtx = imageCanvas.getContext('2d');
+    imageCtx.fillStyle = '#fff';
+    imageCtx.fillRect(0, 0, width, height);
 
-function resizeTopicCanvas() {
-    const rect = topicCanvas.getBoundingClientRect();
-    const ratio = window.devicePixelRatio || 1;
-    const old = topicHasInk ? topicCanvas.toDataURL() : null;
-    topicCanvas.width = Math.max(1, Math.round(rect.width * ratio));
-    topicCanvas.height = Math.max(1, Math.round(rect.height * ratio));
-    topicCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
-    topicCtx.fillStyle = '#fff';
-    topicCtx.fillRect(0, 0, rect.width, rect.height);
-    if(old) {
-        const image = new Image();
-        image.onload = () => topicCtx.drawImage(image, 0, 0, rect.width, rect.height);
-        image.src = old;
-    }
+    pageData.strokes.forEach(stroke => {
+        if(!stroke.points || !stroke.points.length) return;
+        imageCtx.save();
+        imageCtx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
+        let alpha = 1, mult = 1, cap = 'round', join = 'round', dash = [];
+        switch(stroke.tool) {
+            case 'ballpoint': mult=.72; alpha=.95; break;
+            case 'fine': mult=.42; alpha=.92; break;
+            case 'fountain': mult=1.15; break;
+            case 'pencil': mult=.78; alpha=.48; dash=[1.4,1.1]; break;
+            case 'brush': mult=2.15; alpha=.9; break;
+            case 'marker': mult=2.35; alpha=.68; cap='square'; join='bevel'; break;
+            case 'highlighter': mult=4.2; alpha=.22; cap='square'; join='bevel'; break;
+            case 'calligraphy': mult=2.1; alpha=.96; cap='square'; break;
+            case 'eraser': mult=3; break;
+        }
+        imageCtx.globalAlpha = alpha;
+        imageCtx.strokeStyle = stroke.color;
+        imageCtx.fillStyle = stroke.color;
+        imageCtx.lineCap = cap;
+        imageCtx.lineJoin = join;
+        imageCtx.setLineDash(dash);
+        const points = stroke.points;
+        if(points.length === 1) {
+            const point = points[0];
+            const pressure = stroke.usePressure ? Math.max(.15, point.pressure || .5) : 1;
+            imageCtx.beginPath();
+            imageCtx.arc(point.x*width, point.y*height, stroke.size*mult*pressure/2, 0, Math.PI*2);
+            imageCtx.fill();
+        } else {
+            for(let i=1;i<points.length;i++) {
+                const a=points[i-1], b=points[i];
+                const pressure=stroke.usePressure ? Math.max(.15,((a.pressure||.5)+(b.pressure||.5))/2) : 1;
+                const dx=(b.x-a.x)*width, dy=(b.y-a.y)*height;
+                const angle=Math.atan2(dy,dx);
+                let factor=1;
+                if(stroke.tool==='calligraphy') factor=.28+.92*Math.abs(Math.sin(angle));
+                else if(stroke.tool==='fountain') factor=.72+pressure*.48;
+                else if(stroke.tool==='brush') factor=.82+pressure*.38;
+                imageCtx.beginPath();
+                imageCtx.lineWidth=Math.max(.45,stroke.size*mult*pressure*factor);
+                imageCtx.moveTo(a.x*width,a.y*height);
+                imageCtx.lineTo(b.x*width,b.y*height);
+                imageCtx.stroke();
+            }
+        }
+        imageCtx.restore();
+    });
+    return imageCanvas.toDataURL('image/png');
 }
-function clearTopicWriting() {
-    const rect = topicCanvas.getBoundingClientRect();
-    topicCtx.save();
-    topicCtx.setTransform(1, 0, 0, 1, 0, 0);
-    topicCtx.clearRect(0, 0, topicCanvas.width, topicCanvas.height);
-    topicCtx.restore();
-    topicCtx.fillStyle = '#fff';
-    topicCtx.fillRect(0, 0, rect.width, rect.height);
-    topicHasInk = false;
+function pageImageBytes(dataUrl) {
+    const binary = atob(dataUrl.split(',')[1]);
+    const bytes = new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+    return bytes;
 }
-function topicPointerPoint(e) {
-    const r = topicCanvas.getBoundingClientRect();
-    return {x:e.clientX-r.left, y:e.clientY-r.top};
-}
-topicCanvas.addEventListener('pointerdown', e => {
-    e.preventDefault();
-    topicDrawing = true;
-    topicHasInk = true;
-    topicCanvas.setPointerCapture(e.pointerId);
-    const p = topicPointerPoint(e);
-    topicCtx.beginPath();
-    topicCtx.moveTo(p.x, p.y);
-});
-topicCanvas.addEventListener('pointermove', e => {
-    if(!topicDrawing) return;
-    e.preventDefault();
-    const p = topicPointerPoint(e);
-    const erasing = $('topicPenTool').value === 'eraser';
-    topicCtx.globalCompositeOperation = erasing ? 'destination-out' : 'source-over';
-    topicCtx.strokeStyle = $('topicPenColor').value;
-    topicCtx.lineWidth = Math.max(1, Number($('topicPenSize').value) || 20) *
-        (e.pointerType === 'pen' && e.pressure > 0 ? e.pressure : 1);
-    topicCtx.lineCap = 'round';
-    topicCtx.lineJoin = 'round';
-    topicCtx.lineTo(p.x, p.y);
-    topicCtx.stroke();
-});
-function endTopicPointer() {
-    topicDrawing = false;
-    topicCtx.globalCompositeOperation = 'source-over';
-}
-topicCanvas.addEventListener('pointerup', endTopicPointer);
-topicCanvas.addEventListener('pointercancel', endTopicPointer);
-$('clearTopicCanvas').onclick = clearTopicWriting;
-requestAnimationFrame(resizeTopicCanvas);
 
 /* ابزارها */
 
@@ -1987,7 +1954,6 @@ const resizeObserver = new ResizeObserver(() => {
 resizeObserver.observe(paperArea);
 window.addEventListener('resize', () => {
     renderPaper();
-    resizeTopicCanvas();
 });
 
 /* ذخیره خودکار */
