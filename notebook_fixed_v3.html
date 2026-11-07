@@ -918,6 +918,9 @@ canvas {
                 <option value="marker">ماژیک</option>
                 <option value="highlighter">هایلایتر</option>
                 <option value="calligraphy">خوشنویسی</option>
+                <option value="nastaliq">نستعلیق‌نما</option>
+                <option value="tahriri">تحریری</option>
+                <option value="titr">قلم تیتر</option>
                 <option value="eraser">پاک‌کن</option>
             </select>
 
@@ -1014,6 +1017,9 @@ const penSampleOptions = [
     {value:'marker', label:'ماژیک'},
     {value:'highlighter', label:'هایلایتر'},
     {value:'calligraphy', label:'خوشنویسی'},
+    {value:'nastaliq', label:'نستعلیق‌نما'},
+    {value:'tahriri', label:'تحریری'},
+    {value:'titr', label:'قلم تیتر'},
     {value:'eraser', label:'پاک‌کن'}
 ];
 function saveFavoriteColors() {
@@ -1049,6 +1055,9 @@ function renderPenSamples() {
         marker:'M4 18 Q20 5 34 17 T70 15',
         highlighter:'M4 18 L18 12 L30 19 L44 10 L58 17 L70 12',
         calligraphy:'M4 20 Q18 2 30 18 T70 10',
+        nastaliq:'M4 22 C14 2 24 27 35 12 S55 4 70 18',
+        tahriri:'M4 18 Q16 8 28 17 T52 16 T70 12',
+        titr:'M4 20 C18 1 26 27 40 13 S58 6 70 17',
         eraser:'M4 18 L18 18 M25 18 L38 18 M45 18 L70 18'
     };
     container.innerHTML = '';
@@ -1523,113 +1532,68 @@ function renderPaper() {
 
 /* رسم خطوط */
 
-function drawStroke(s) {
-    if(!s.points || !s.points.length) return;
-
-    ctx.save();
-    ctx.globalCompositeOperation =
-        s.tool === 'eraser' ? 'destination-out' : 'source-over';
-
-    let alpha = 1;
-    let mult = 1;
-    let lineCap = 'round';
-    let lineJoin = 'round';
-    let dash = [];
-
-    switch(s.tool) {
-        case 'ballpoint':
-            mult = .72;
-            alpha = .95;
-            break;
-        case 'fine':
-            mult = .42;
-            alpha = .92;
-            break;
-        case 'fountain':
-            mult = 1.15;
-            alpha = 1;
-            break;
-        case 'pencil':
-            mult = .78;
-            alpha = .48;
-            dash = [1.4, 1.1];
-            break;
-        case 'brush':
-            mult = 2.15;
-            alpha = .9;
-            break;
-        case 'marker':
-            mult = 2.35;
-            alpha = .68;
-            lineCap = 'square';
-            lineJoin = 'bevel';
-            break;
-        case 'highlighter':
-            mult = 4.2;
-            alpha = .22;
-            lineCap = 'square';
-            lineJoin = 'bevel';
-            break;
-        case 'calligraphy':
-            mult = 2.1;
-            alpha = .96;
-            lineCap = 'square';
-            break;
-        case 'eraser':
-            mult = 3;
-            break;
+function drawStrokeToContext(target, stroke, width, height) {
+    if(!stroke.points || !stroke.points.length) return;
+    const pts = stroke.points;
+    const tool = stroke.tool;
+    let mult = 1, alpha = 1, cap = 'round', join = 'round', dash = [];
+    switch(tool) {
+        case 'ballpoint': mult=.72; alpha=.95; break;
+        case 'fine': mult=.42; alpha=.92; break;
+        case 'fountain': mult=1.15; break;
+        case 'pencil': mult=.78; alpha=.48; dash=[1.4,1.1]; break;
+        case 'brush': mult=2.15; alpha=.9; break;
+        case 'marker': mult=2.35; alpha=.68; cap='square'; join='bevel'; break;
+        case 'highlighter': mult=4.2; alpha=.22; cap='square'; join='bevel'; break;
+        case 'calligraphy': mult=2.1; alpha=.96; cap='square'; break;
+        case 'nastaliq': mult=1.55; alpha=.98; break;
+        case 'tahriri': mult=.92; alpha=.97; break;
+        case 'titr': mult=2.45; alpha=.94; break;
+        case 'eraser': mult=3; break;
     }
-
-    ctx.globalAlpha = alpha;
-    ctx.strokeStyle = s.color;
-    ctx.fillStyle = s.color;
-    ctx.lineCap = lineCap;
-    ctx.lineJoin = lineJoin;
-    ctx.setLineDash(dash);
-
-    const pts = s.points;
+    target.save();
+    target.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
+    target.globalAlpha = alpha;
+    target.strokeStyle = stroke.color;
+    target.fillStyle = stroke.color;
+    target.lineCap = cap;
+    target.lineJoin = join;
+    target.setLineDash(dash);
     if(pts.length === 1) {
-        const p = pts[0];
-        const pressure = s.usePressure
-            ? Math.max(.15, p.pressure || .5)
-            : 1;
-        ctx.beginPath();
-        ctx.arc(
-            p.x * displayWidth,
-            p.y * displayHeight,
-            s.size * mult * pressure / 2,
-            0,
-            Math.PI * 2
-        );
-        ctx.fill();
+        const p=pts[0], pressure=stroke.usePressure ? Math.max(.15,p.pressure||.5) : 1;
+        target.beginPath();
+        target.arc(p.x*width,p.y*height,stroke.size*mult*pressure/2,0,Math.PI*2);
+        target.fill();
     } else {
-        for(let i = 1; i < pts.length; i++) {
-            const p1 = pts[i - 1];
-            const p2 = pts[i];
-            const pressure = s.usePressure
-                ? Math.max(.15, ((p1.pressure || .5) + (p2.pressure || .5)) / 2)
-                : 1;
-            const dx = (p2.x - p1.x) * displayWidth;
-            const dy = (p2.y - p1.y) * displayHeight;
-            const angle = Math.atan2(dy, dx);
-
-            let widthFactor = 1;
-            if(s.tool === 'calligraphy') {
-                widthFactor = .28 + .92 * Math.abs(Math.sin(angle));
-            } else if(s.tool === 'fountain') {
-                widthFactor = .72 + pressure * .48;
-            } else if(s.tool === 'brush') {
-                widthFactor = .82 + pressure * .38;
-            }
-
-            ctx.beginPath();
-            ctx.lineWidth = Math.max(.45, s.size * mult * pressure * widthFactor);
-            ctx.moveTo(p1.x * displayWidth, p1.y * displayHeight);
-            ctx.lineTo(p2.x * displayWidth, p2.y * displayHeight);
-            ctx.stroke();
+        for(let i=1;i<pts.length;i++) {
+            const a=pts[i-1], b=pts[i];
+            const dx=(b.x-a.x)*width, dy=(b.y-a.y)*height;
+            const distance=Math.hypot(dx,dy);
+            const angle=Math.atan2(dy,dx);
+            const pressure=stroke.usePressure ? Math.max(.15,((a.pressure||.5)+(b.pressure||.5))/2) : 1;
+            let factor=1;
+            if(tool==='calligraphy') factor=.28+.92*Math.abs(Math.sin(angle));
+            else if(tool==='fountain') factor=.72+pressure*.48;
+            else if(tool==='brush') factor=.82+pressure*.38;
+            else if(tool==='nastaliq') {
+                const taper=Math.min(1,(i/Math.max(1,pts.length-1))*5,((pts.length-i)/Math.max(1,pts.length-1))*5);
+                factor=(.42+.92*Math.abs(Math.sin(angle)))*(.62+.38*Math.max(.18,taper));
+            } else if(tool==='tahriri') {
+                const speedFactor=Math.max(.78,Math.min(1.12,1.08-distance/32));
+                factor=(.88+pressure*.18)*speedFactor;
+            } else if(tool==='titr') factor=.92+pressure*.28;
+            target.beginPath();
+            target.lineWidth=Math.max(.45,stroke.size*mult*pressure*factor);
+            target.moveTo(a.x*width,a.y*height);
+            target.lineTo(b.x*width,b.y*height);
+            target.stroke();
         }
     }
-    ctx.restore();
+    target.restore();
+}
+
+function drawStroke(s) {
+    drawStrokeToContext(ctx, s, displayWidth, displayHeight);
 }
 
 /* بازسازی صفحه */
@@ -1746,55 +1710,7 @@ function createPageImage(pageData) {
     const imageCtx = imageCanvas.getContext('2d');
     imageCtx.fillStyle = '#fff';
     imageCtx.fillRect(0, 0, width, height);
-
-    pageData.strokes.forEach(stroke => {
-        if(!stroke.points || !stroke.points.length) return;
-        imageCtx.save();
-        imageCtx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
-        let alpha = 1, mult = 1, cap = 'round', join = 'round', dash = [];
-        switch(stroke.tool) {
-            case 'ballpoint': mult=.72; alpha=.95; break;
-            case 'fine': mult=.42; alpha=.92; break;
-            case 'fountain': mult=1.15; break;
-            case 'pencil': mult=.78; alpha=.48; dash=[1.4,1.1]; break;
-            case 'brush': mult=2.15; alpha=.9; break;
-            case 'marker': mult=2.35; alpha=.68; cap='square'; join='bevel'; break;
-            case 'highlighter': mult=4.2; alpha=.22; cap='square'; join='bevel'; break;
-            case 'calligraphy': mult=2.1; alpha=.96; cap='square'; break;
-            case 'eraser': mult=3; break;
-        }
-        imageCtx.globalAlpha = alpha;
-        imageCtx.strokeStyle = stroke.color;
-        imageCtx.fillStyle = stroke.color;
-        imageCtx.lineCap = cap;
-        imageCtx.lineJoin = join;
-        imageCtx.setLineDash(dash);
-        const points = stroke.points;
-        if(points.length === 1) {
-            const point = points[0];
-            const pressure = stroke.usePressure ? Math.max(.15, point.pressure || .5) : 1;
-            imageCtx.beginPath();
-            imageCtx.arc(point.x*width, point.y*height, stroke.size*mult*pressure/2, 0, Math.PI*2);
-            imageCtx.fill();
-        } else {
-            for(let i=1;i<points.length;i++) {
-                const a=points[i-1], b=points[i];
-                const pressure=stroke.usePressure ? Math.max(.15,((a.pressure||.5)+(b.pressure||.5))/2) : 1;
-                const dx=(b.x-a.x)*width, dy=(b.y-a.y)*height;
-                const angle=Math.atan2(dy,dx);
-                let factor=1;
-                if(stroke.tool==='calligraphy') factor=.28+.92*Math.abs(Math.sin(angle));
-                else if(stroke.tool==='fountain') factor=.72+pressure*.48;
-                else if(stroke.tool==='brush') factor=.82+pressure*.38;
-                imageCtx.beginPath();
-                imageCtx.lineWidth=Math.max(.45,stroke.size*mult*pressure*factor);
-                imageCtx.moveTo(a.x*width,a.y*height);
-                imageCtx.lineTo(b.x*width,b.y*height);
-                imageCtx.stroke();
-            }
-        }
-        imageCtx.restore();
-    });
+    pageData.strokes.forEach(stroke => drawStrokeToContext(imageCtx, stroke, width, height));
     return imageCanvas.toDataURL('image/png');
 }
 function pageImageBytes(dataUrl) {
