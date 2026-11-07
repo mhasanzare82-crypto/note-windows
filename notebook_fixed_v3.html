@@ -712,6 +712,83 @@ canvas {
     .favorite-colors { grid-template-columns: repeat(4, 1fr); }
 }
 
+
+/* پنل سمت راست برای موضوعات منتخب و صفحات همان موضوع */
+.app.writing-fullscreen .top-area {
+    display:flex;
+    flex-direction:column;
+    position:fixed;
+    top:10px;
+    right:10px;
+    left:auto;
+    transform:none;
+    z-index:10025;
+    width:218px;
+    max-width:calc(100vw - 20px);
+    max-height:calc(100dvh - 20px);
+    padding:10px;
+    gap:7px;
+    overflow-y:auto;
+    overflow-x:hidden;
+    background:#fff;
+    border:1px solid #dfe4eb;
+    border-radius:12px;
+    box-shadow:0 2px 12px #0002;
+}
+.app.writing-fullscreen .top-area > .strip-label:first-child { display:block; }
+.app.writing-fullscreen .top-area #pinnedTabs {
+    display:flex;
+    flex-direction:column;
+    flex-wrap:nowrap;
+    gap:5px;
+    padding:0;
+    min-height:0;
+    overflow:visible;
+}
+.app.writing-fullscreen .top-area #pinnedTabs .tab {
+    display:block;
+    width:100%;
+    max-width:none;
+    min-height:34px;
+    text-align:right;
+    white-space:normal;
+}
+.app.writing-fullscreen .top-area #newPage {
+    display:block !important;
+    width:100%;
+    min-height:38px;
+    background:#3769d6;
+    color:#fff;
+}
+.app.writing-fullscreen .top-area #pageTabs {
+    display:flex !important;
+    flex-direction:column;
+    flex-wrap:nowrap;
+    gap:5px;
+    padding:0;
+    overflow:visible;
+}
+.app.writing-fullscreen .top-area #pageTabs .tab {
+    width:100%;
+    text-align:right;
+    white-space:normal;
+}
+.app.writing-fullscreen .top-area > .strip-label:nth-of-type(2) { display:block; }
+.app.writing-fullscreen .floating-controls { right:240px; left:auto; transform:none; max-width:calc(100vw - 500px); }
+.app.writing-fullscreen .quick-palette { left:10px; }
+@media(max-width:700px) {
+    .app.writing-fullscreen .top-area {
+        top:10px;right:8px;width:155px;max-height:calc(100dvh - 20px);
+    }
+    .app.writing-fullscreen .floating-controls {
+        top:auto;bottom:10px;right:8px;left:8px;max-width:none;
+        justify-content:center;transform:none;
+    }
+    .app.writing-fullscreen .quick-palette {
+        top:10px;left:8px;width:125px;max-height:calc(100dvh - 100px);
+    }
+}
+
 </style>
 </head>
 
