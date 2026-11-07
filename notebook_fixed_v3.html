@@ -1628,10 +1628,7 @@ $('newPage').onclick = newPage;
 const appElement = document.querySelector('.app');
 const fullscreenToggle = $('fullscreenToggle');
 
-const topAreaOriginalPositions = [
-    {node:$('newPage'), parent:originalControlPositions.find(item => item.node && item.node.id === 'newPage').parent, nextSibling:originalControlPositions.find(item => item.node && item.node.id === 'newPage').nextSibling},
-    {node:$('pageTabs'), parent:$('pageTabs').parentElement, nextSibling:$('pageTabs').nextSibling}
-];
+let topAreaOriginalPositions;
 function setWritingFullscreen(enabled) {
     if(enabled) {
         const topArea = document.querySelector('.top-area');
@@ -1794,6 +1791,18 @@ const originalControlPositions = ['newPage','tool','color','undo','clear'].map(i
     const node = $(id);
     return {node, parent:node ? node.parentElement : null, nextSibling:node ? node.nextSibling : null};
 });
+topAreaOriginalPositions = [
+    {
+        node:$('newPage'),
+        parent:originalControlPositions.find(item => item.node && item.node.id === 'newPage').parent,
+        nextSibling:originalControlPositions.find(item => item.node && item.node.id === 'newPage').nextSibling
+    },
+    {
+        node:$('pageTabs'),
+        parent:$('pageTabs').parentElement,
+        nextSibling:$('pageTabs').nextSibling
+    }
+];
 const floatingControls = document.createElement('div');
 floatingControls.className = 'floating-controls';
 floatingControls.id = 'floatingControls';
@@ -1857,6 +1866,8 @@ dragHandle.addEventListener('pointercancel', stopDockDrag);
 /* شروع برنامه */
 
 render();
+// برنامه از ابتدا در حالت تمام‌صفحه داخلی باز می‌شود.
+setWritingFullscreen(true);
 
 </script>
 </body>
