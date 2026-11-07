@@ -665,6 +665,32 @@ canvas {
     font-size: 10px;
     padding: 6px 4px;
 }
+.palette-size-title { margin-top: 12px; }
+.palette-size-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 9px;
+}
+.palette-size-control input {
+    width: 100%;
+    min-width: 0;
+    accent-color: #3769d6;
+}
+.palette-size-control output {
+    min-width: 25px;
+    color: #455268;
+    font-size: 11px;
+    text-align: center;
+}
+.palette-undo {
+    width: 100%;
+    padding: 8px;
+    background: #edf2ff;
+    border: 1px solid #cbd8f5;
+    color: #2456bd;
+    font-size: 11px;
+}
 .pen-samples {
     display: flex;
     flex-direction: column;
@@ -697,6 +723,27 @@ canvas {
     border-bottom: 3px solid currentColor;
     border-radius: 50%;
 }
+.pen-sample svg {
+    width: 78px;
+    height: 30px;
+    flex: 1;
+    overflow: visible;
+}
+.pen-sample svg path {
+    fill: none;
+    stroke: var(--sample-color, currentColor);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.pen-sample[data-tool="ballpoint"] svg path { stroke-width: 1.5; }
+.pen-sample[data-tool="fine"] svg path { stroke-width: 1; }
+.pen-sample[data-tool="fountain"] svg path { stroke-width: 3.2; }
+.pen-sample[data-tool="pencil"] svg path { stroke-width: 1.8; stroke-dasharray: 2 1.5; opacity: .65; }
+.pen-sample[data-tool="brush"] svg path { stroke-width: 5.5; }
+.pen-sample[data-tool="marker"] svg path { stroke-width: 7; stroke-linecap: square; opacity: .72; }
+.pen-sample[data-tool="highlighter"] svg path { stroke-width: 9; stroke-linecap: square; opacity: .28; }
+.pen-sample[data-tool="calligraphy"] svg path { stroke-width: 4.5; stroke-linecap: square; }
 .pen-sample[data-tool="pencil"] .pen-sample-line { opacity: .45; border-bottom-style: dashed; }
 .pen-sample[data-tool="brush"] .pen-sample-line { border-bottom-width: 6px; }
 .pen-sample[data-tool="marker"] .pen-sample-line { border-bottom-width: 8px; opacity: .65; }
@@ -805,6 +852,12 @@ canvas {
     </div>
     <div class="quick-palette-title">✍️ نمونه قلم‌ها</div>
     <div class="pen-samples" id="penSamples"></div>
+    <div class="quick-palette-title palette-size-title">📏 اندازه قلم</div>
+    <div class="palette-size-control">
+        <input type="range" id="paletteThickness" min="1" max="100" value="20" aria-label="اندازه قلم">
+        <output id="paletteThicknessValue">20</output>
+    </div>
+    <button type="button" class="palette-undo" id="paletteUndo">↶ بازگشت آخرین حرکت</button>
 </aside>
 
 
@@ -1029,6 +1082,17 @@ $('color').addEventListener('input', () => {
     renderFavoriteColors();
     renderPenSamples();
 });
+$('paletteThickness').value = $('thickness').value;
+$('paletteThicknessValue').textContent = $('thickness').value;
+$('paletteThickness').addEventListener('input', () => {
+    $('thickness').value = $('paletteThickness').value;
+    $('thicknessValue').textContent = $('paletteThickness').value;
+});
+$('thickness').addEventListener('input', () => {
+    $('paletteThickness').value = $('thickness').value;
+    $('paletteThicknessValue').textContent = $('thickness').value;
+});
+$('paletteUndo').addEventListener('click', () => $('undo').click());
 $('tool').addEventListener('change', () => {
     renderPenSamples();
     if($('tool').value !== 'eraser') largeEraser.classList.remove('active');
@@ -1343,45 +1407,54 @@ function drawStroke(s) {
     if(!s.points || !s.points.length) return;
 
     ctx.save();
-
     ctx.globalCompositeOperation =
         s.tool === 'eraser' ? 'destination-out' : 'source-over';
 
     let alpha = 1;
     let mult = 1;
+    let lineCap = 'round';
+    let lineJoin = 'round';
+    let dash = [];
 
     switch(s.tool) {
+        case 'ballpoint':
+            mult = .72;
+            alpha = .95;
+            break;
         case 'fine':
-            mult = .55;
+            mult = .42;
+            alpha = .92;
             break;
-
         case 'fountain':
-            mult = 1.2;
+            mult = 1.15;
+            alpha = 1;
             break;
-
         case 'pencil':
-            mult = .8;
-            alpha = .55;
+            mult = .78;
+            alpha = .48;
+            dash = [1.4, 1.1];
             break;
-
         case 'brush':
-            mult = 1.8;
+            mult = 2.15;
+            alpha = .9;
             break;
-
         case 'marker':
-            mult = 1.7;
-            alpha = .75;
+            mult = 2.35;
+            alpha = .68;
+            lineCap = 'square';
+            lineJoin = 'bevel';
             break;
-
         case 'highlighter':
-            mult = 3;
-            alpha = .25;
+            mult = 4.2;
+            alpha = .22;
+            lineCap = 'square';
+            lineJoin = 'bevel';
             break;
-
         case 'calligraphy':
-            mult = 1.5;
+            mult = 2.1;
+            alpha = .96;
+            lineCap = 'square';
             break;
-
         case 'eraser':
             mult = 3;
             break;
@@ -1390,20 +1463,17 @@ function drawStroke(s) {
     ctx.globalAlpha = alpha;
     ctx.strokeStyle = s.color;
     ctx.fillStyle = s.color;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    ctx.lineCap = lineCap;
+    ctx.lineJoin = lineJoin;
+    ctx.setLineDash(dash);
 
     const pts = s.points;
-
     if(pts.length === 1) {
         const p = pts[0];
-
         const pressure = s.usePressure
             ? Math.max(.15, p.pressure || .5)
             : 1;
-
         ctx.beginPath();
-
         ctx.arc(
             p.x * displayWidth,
             p.y * displayHeight,
@@ -1411,40 +1481,34 @@ function drawStroke(s) {
             0,
             Math.PI * 2
         );
-
         ctx.fill();
     } else {
         for(let i = 1; i < pts.length; i++) {
             const p1 = pts[i - 1];
             const p2 = pts[i];
-
             const pressure = s.usePressure
-                ? Math.max(.15,
-                    ((p1.pressure || .5) +
-                     (p2.pressure || .5)) / 2)
+                ? Math.max(.15, ((p1.pressure || .5) + (p2.pressure || .5)) / 2)
                 : 1;
+            const dx = (p2.x - p1.x) * displayWidth;
+            const dy = (p2.y - p1.y) * displayHeight;
+            const angle = Math.atan2(dy, dx);
+
+            let widthFactor = 1;
+            if(s.tool === 'calligraphy') {
+                widthFactor = .28 + .92 * Math.abs(Math.sin(angle));
+            } else if(s.tool === 'fountain') {
+                widthFactor = .72 + pressure * .48;
+            } else if(s.tool === 'brush') {
+                widthFactor = .82 + pressure * .38;
+            }
 
             ctx.beginPath();
-
-            ctx.lineWidth = Math.max(
-                .5,
-                s.size * mult * pressure
-            );
-
-            ctx.moveTo(
-                p1.x * displayWidth,
-                p1.y * displayHeight
-            );
-
-            ctx.lineTo(
-                p2.x * displayWidth,
-                p2.y * displayHeight
-            );
-
+            ctx.lineWidth = Math.max(.45, s.size * mult * pressure * widthFactor);
+            ctx.moveTo(p1.x * displayWidth, p1.y * displayHeight);
+            ctx.lineTo(p2.x * displayWidth, p2.y * displayHeight);
             ctx.stroke();
         }
     }
-
     ctx.restore();
 }
 
