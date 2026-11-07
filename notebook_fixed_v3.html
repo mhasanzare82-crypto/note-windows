@@ -54,6 +54,92 @@ button:hover {
     overflow: hidden;
 }
 
+
+/* رنگ‌های محبوب و انتخاب سریع نمونه قلم با لمس یا قلم نوری */
+const FAVORITE_COLORS_KEY = 'notebook_favorite_colors_v1';
+const defaultFavoriteColors = [
+    '#20242c', '#e53935', '#1e88e5', '#43a047',
+    '#8e24aa', '#fb8c00', '#00897b', '#5e35b1',
+    '#ec407a', '#795548'
+];
+let favoriteColors;
+try {
+    favoriteColors = JSON.parse(localStorage.getItem(FAVORITE_COLORS_KEY) || 'null');
+} catch(error) {
+    favoriteColors = null;
+}
+if(!Array.isArray(favoriteColors) || !favoriteColors.length) {
+    favoriteColors = [...defaultFavoriteColors];
+}
+const penSampleOptions = [
+    {value:'ballpoint', label:'خودکار'},
+    {value:'fine', label:'روان‌نویس'},
+    {value:'fountain', label:'خودنویس'},
+    {value:'pencil', label:'مداد'},
+    {value:'brush', label:'قلم‌مویی'},
+    {value:'marker', label:'ماژیک'},
+    {value:'highlighter', label:'هایلایتر'},
+    {value:'calligraphy', label:'خوشنویسی'},
+    {value:'eraser', label:'پاک‌کن'}
+];
+function saveFavoriteColors() {
+    try { localStorage.setItem(FAVORITE_COLORS_KEY, JSON.stringify(favoriteColors)); } catch(error) {}
+}
+function renderFavoriteColors() {
+    const container = $('favoriteColors');
+    if(!container) return;
+    container.innerHTML = '';
+    favoriteColors.forEach(color => {
+        const swatch = document.createElement('button');
+        swatch.type = 'button';
+        swatch.className = 'favorite-color' + ($('color').value.toLowerCase() === color.toLowerCase() ? ' selected' : '');
+        swatch.style.background = color;
+        swatch.title = color;
+        swatch.setAttribute('aria-label', 'انتخاب رنگ ' + color);
+        swatch.addEventListener('click', () => {
+            $('color').value = color;
+            renderFavoriteColors();
+        });
+        container.appendChild(swatch);
+    });
+}
+function renderPenSamples() {
+    const container = $('penSamples');
+    if(!container) return;
+    container.innerHTML = '';
+    penSampleOptions.forEach(option => {
+        const sample = document.createElement('button');
+        sample.type = 'button';
+        sample.className = 'pen-sample' + ($('tool').value === option.value ? ' selected' : '');
+        sample.dataset.tool = option.value;
+        sample.innerHTML = '<span class="pen-sample-name"></span><span class="pen-sample-line"></span>';
+        sample.querySelector('.pen-sample-name').textContent = option.label;
+        sample.style.color = $('color').value;
+        sample.addEventListener('click', () => {
+            $('tool').value = option.value;
+            renderPenSamples();
+        });
+        container.appendChild(sample);
+    });
+}
+$('addFavoriteColor').addEventListener('click', () => {
+    const chosen = $('favoriteColorPicker').value.toLowerCase();
+    if(!favoriteColors.some(color => color.toLowerCase() === chosen)) {
+        favoriteColors.push(chosen);
+        saveFavoriteColors();
+        renderFavoriteColors();
+    }
+    $('color').value = chosen;
+    renderFavoriteColors();
+});
+$('color').addEventListener('input', () => {
+    renderFavoriteColors();
+    renderPenSamples();
+});
+$('tool').addEventListener('change', renderPenSamples);
+renderFavoriteColors();
+renderPenSamples();
+
 /* حالت تمام‌صفحه محیط نوشتن */
 .app.writing-fullscreen header,
 .app.writing-fullscreen .sidebar,
@@ -562,12 +648,133 @@ canvas {
     .app.writing-fullscreen .top-area { top: 420px; max-height: 125px; }
 }
 
+
+/* پنل رنگ‌های محبوب و نمونه قلم‌ها در سمت چپ تمام‌صفحه */
+.quick-palette {
+    display: none;
+}
+.app.writing-fullscreen .quick-palette {
+    display: block;
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 10015;
+    width: 178px;
+    max-height: calc(100dvh - 20px);
+    overflow-y: auto;
+    padding: 10px;
+    background: #fff;
+    border: 1px solid #dfe4eb;
+    border-radius: 10px;
+    box-shadow: 0 2px 12px #0002;
+}
+.quick-palette-title {
+    margin: 0 0 8px;
+    font-size: 11px;
+    font-weight: bold;
+    color: #455268;
+}
+.favorite-colors {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    margin-bottom: 9px;
+}
+.favorite-color {
+    width: 25px;
+    height: 25px;
+    min-width: 0;
+    padding: 0;
+    border: 2px solid #e1e5eb;
+    border-radius: 50%;
+}
+.favorite-color.selected {
+    outline: 2px solid #3769d6;
+    outline-offset: 2px;
+}
+.palette-actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 12px;
+}
+.palette-actions input[type=color] {
+    width: 30px;
+    height: 29px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+.palette-actions button {
+    flex: 1;
+    font-size: 10px;
+    padding: 6px 4px;
+}
+.pen-samples {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.pen-sample {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    padding: 6px 7px;
+    border: 1px solid #e3e7ed;
+    background: #f8f9fb;
+    text-align: right;
+}
+.pen-sample.selected {
+    background: #e8efff;
+    border-color: #91b2f4;
+    color: #2456bd;
+}
+.pen-sample-name {
+    width: 62px;
+    flex-shrink: 0;
+    font-size: 10px;
+}
+.pen-sample-line {
+    display: block;
+    flex: 1;
+    height: 12px;
+    border-bottom: 3px solid currentColor;
+    border-radius: 50%;
+}
+.pen-sample[data-tool="pencil"] .pen-sample-line { opacity: .45; border-bottom-style: dashed; }
+.pen-sample[data-tool="brush"] .pen-sample-line { border-bottom-width: 6px; }
+.pen-sample[data-tool="marker"] .pen-sample-line { border-bottom-width: 8px; opacity: .65; }
+.pen-sample[data-tool="highlighter"] .pen-sample-line { border-bottom-width: 9px; opacity: .3; }
+.pen-sample[data-tool="fountain"] .pen-sample-line { border-bottom-width: 4px; }
+.pen-sample[data-tool="calligraphy"] .pen-sample-line { border-bottom-width: 5px; transform: skewX(-25deg); }
+@media(max-width:600px) {
+    .app.writing-fullscreen .quick-palette {
+        width: 142px;
+        padding: 7px;
+    }
+    .pen-sample-name { width: 52px; }
+    .favorite-colors { grid-template-columns: repeat(4, 1fr); }
+}
+
 </style>
 </head>
 
 <body>
 
 <div class="app">
+
+<aside class="quick-palette" id="quickPalette" aria-label="رنگ‌های محبوب و نمونه قلم‌ها">
+    <div class="quick-palette-title">🎨 رنگ‌های مورد علاقه</div>
+    <div class="favorite-colors" id="favoriteColors"></div>
+    <div class="palette-actions">
+        <input type="color" id="favoriteColorPicker" value="#20242c" title="انتخاب رنگ دلخواه">
+        <button type="button" id="addFavoriteColor">＋ افزودن رنگ</button>
+    </div>
+    <div class="quick-palette-title">✍️ نمونه قلم‌ها</div>
+    <div class="pen-samples" id="penSamples"></div>
+</aside>
+
 
 <header>
     <button id="toggle">☰</button>
