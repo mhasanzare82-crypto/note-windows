@@ -1200,34 +1200,116 @@ function save() {
     }
 }
 
-/* خروجی گرفتن از موضوع انتخاب‌شده همراه تمام صفحات */
+/* ساخت فایل ZIP شامل پوشه موضوع و تمام صفحه‌های آن */
+function makeTopicZip(folderName, files) {
+    const encoder = new TextEncoder();
+    const crcTable = new Uint32Array(256);
+    for(let n = 0; n < 256; n++) {
+        let c = n;
+        for(let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        crcTable[n] = c >>> 0;
+    }
+    const crc32 = bytes => {
+        let c = 0xffffffff;
+        for(const b of bytes) c = crcTable[(c ^ b) & 0xff] ^ (c >>> 8);
+        return (c ^ 0xffffffff) >>> 0;
+    };
+    const parts = [];
+    const central = [];
+    let offset = 0;
+    const allFiles = [{name:folderName + '/', data:new Uint8Array(0)}, ...files];
+
+    allFiles.forEach(file => {
+        const nameBytes = encoder.encode(file.name);
+        const dataBytes = typeof file.data === 'string' ? encoder.encode(file.data) : file.data;
+        const crc = crc32(dataBytes);
+        const local = new Uint8Array(30 + nameBytes.length + dataBytes.length);
+        const lv = new DataView(local.buffer);
+        lv.setUint32(0, 0x04034b50, true);
+        lv.setUint16(4, 20, true);
+        lv.setUint16(6, 0x0800, true);
+        lv.setUint16(8, 0, true);
+        lv.setUint32(14, crc, true);
+        lv.setUint32(18, dataBytes.length, true);
+        lv.setUint32(22, dataBytes.length, true);
+        lv.setUint16(26, nameBytes.length, true);
+        local.set(nameBytes, 30);
+        local.set(dataBytes, 30 + nameBytes.length);
+        parts.push(local);
+
+        const dir = new Uint8Array(46 + nameBytes.length);
+        const dv = new DataView(dir.buffer);
+        dv.setUint32(0, 0x02014b50, true);
+        dv.setUint16(4, 20, true);
+        dv.setUint16(6, 20, true);
+        dv.setUint16(8, 0x0800, true);
+        dv.setUint16(10, 0, true);
+        dv.setUint32(16, crc, true);
+        dv.setUint32(20, dataBytes.length, true);
+        dv.setUint32(24, dataBytes.length, true);
+        dv.setUint16(28, nameBytes.length, true);
+        dv.setUint32(38, file.name.endsWith('/') ? 0x10 : 0, true);
+        dv.setUint32(42, offset, true);
+        dir.set(nameBytes, 46);
+        central.push(dir);
+        offset += local.length;
+    });
+
+    const centralSize = central.reduce((sum, item) => sum + item.length, 0);
+    const end = new Uint8Array(22);
+    const ev = new DataView(end.buffer);
+    ev.setUint32(0, 0x06054b50, true);
+    ev.setUint16(8, allFiles.length, true);
+    ev.setUint16(10, allFiles.length, true);
+    ev.setUint32(12, centralSize, true);
+    ev.setUint32(16, offset, true);
+    return new Blob([...parts, ...central, end], {type:'application/zip'});
+}
+
 $('saveTopic').onclick = () => {
     const selectedTopic = topic();
     if(!selectedTopic) return;
 
+    const requestedName = prompt('نام پوشه برای ذخیره موضوع و صفحات آن را وارد کنید:', selectedTopic.name || 'موضوع من');
+    if(requestedName === null) return;
+    const folderName = requestedName.trim().replace(/[\\/:*?"<>|]/g, '_').replace(/^\\.+|\\.+$/g, '') || 'موضوع من';
+
     try {
-        const exportData = {
-            format: 'notebook-topic',
-            version: 1,
-            exportedAt: new Date().toISOString(),
-            topic: selectedTopic
-        };
-        const blob = new Blob(
-            [JSON.stringify(exportData, null, 2)],
-            {type: 'application/json;charset=utf-8'}
-        );
+        const files = [{
+            name: folderName + '/اطلاعات موضوع.json',
+            data: JSON.stringify({
+                format:'notebook-topic',
+                version:1,
+                exportedAt:new Date().toISOString(),
+                topic:{...selectedTopic, pages:undefined}
+            }, null, 2)
+        }];
+
+        selectedTopic.pages.forEach((pageData, index) => {
+            const pageName = (pageData.name || ('صفحه ' + (index + 1)))
+                .replace(/[\\/:*?"<>|]/g, '_').trim() || ('صفحه ' + (index + 1));
+            files.push({
+                name: folderName + '/' + String(index + 1).padStart(2, '0') + ' - ' + pageName + '.json',
+                data: JSON.stringify({
+                    format:'notebook-page',
+                    version:1,
+                    topicId:selectedTopic.id,
+                    topicName:selectedTopic.name,
+                    page:pageData
+                }, null, 2)
+            });
+        });
+
+        const blob = makeTopicZip(folderName, files);
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        const safeName = (selectedTopic.name || 'topic')
-            .replace(/[\\/:*?"<>|]/g, '_')
-            .trim() || 'topic';
         link.href = url;
-        link.download = safeName + '.json';
+        link.download = folderName + '.zip';
         document.body.appendChild(link);
         link.click();
         link.remove();
-        URL.revokeObjectURL(url);
-        $('status').textContent = '✓ موضوع و تمام صفحات آن ذخیره شد';
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        $('status').textContent = '✓ پوشه موضوع و ' + selectedTopic.pages.length + ' صفحه آماده دانلود شد';
     } catch(error) {
         $('status').textContent = 'ذخیره موضوع انجام نشد';
     }
